@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.venv/
+venv/
+dist/
+build/
+*.so
+
+# uv
+.uv/
+uv.lock.lock
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# mypy / ruff
+.mypy_cache/
+.ruff_cache/
+
+# Env
+.env
+.env.local
+
+# Editors / OS
+.DS_Store
+.vscode/
+.idea/
+
+# Generated artifacts
+docs/E2E-REPORT.md
+requirements.txt
+
+# Knative / Docker buildpack scratch
+.func/
+
+# Local-only Claude state (skills under .claude/skills/ are committed)
+.claude/homunculus/
+.claude/settings.local.json
