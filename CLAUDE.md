@@ -86,3 +86,16 @@ Run these from inside the repo:
 - Don't import a domain from `shared/`.
 - Don't bypass `pyproject.toml` deps with ad-hoc installs.
 - Don't skip the failing-test step.
+
+## Decision Log
+
+**2026-05-16: Repo follows Clara philosophy from the start.**
+Apps/domains/shared layout + nested docs (CLAUDE.md → ARCHITECTURE.md →
+APP.md/DOMAIN.md) chosen so AI tools can navigate at the right altitude
+without retrieving the whole tree. Tradeoff: more directories, but
+comprehension and onboarding both win.
+
+**2026-05-16: `scripts/verify_docs.py` enforces Clara invariants in CI.**
+The companion `.claude/skills/verify-docs` prose-describes the contract;
+the script makes it executable. Findings come back grouped by file with
+severity tiers (CRITICAL blocks, WARNING informs, INFO suggests).
