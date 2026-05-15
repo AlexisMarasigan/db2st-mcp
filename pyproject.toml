@@ -1,0 +1,170 @@
+[project]
+name = "db2st-mcp"
+version = "0.0.1"
+description = "Database-to-Structured-Tools MCP server. Horizontally scalable, auth-gated, Knative-deployable."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "Alexis", email = "alexismarasigan31@gmail.com" }]
+keywords = ["mcp", "model-context-protocol", "knative", "shipment-tracking", "schenker"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Operating System :: OS Independent",
+  "Typing :: Typed",
+]
+
+dependencies = [
+  "mcp>=1.2.0",
+  "fastapi>=0.115.0",
+  "uvicorn[standard]>=0.32.0",
+  "httpx>=0.27.0",
+  "pydantic>=2.9.0",
+  "pydantic-settings>=2.6.0",
+  "structlog>=24.4.0",
+  "python-ulid>=3.0.0",
+]
+
+[project.optional-dependencies]
+redis = ["upstash-redis>=1.2.0"]
+otel = [
+  "opentelemetry-api>=1.27.0",
+  "opentelemetry-sdk>=1.27.0",
+  "opentelemetry-instrumentation-fastapi>=0.48b0",
+  "opentelemetry-instrumentation-httpx>=0.48b0",
+  "opentelemetry-exporter-otlp>=1.27.0",
+]
+
+[project.scripts]
+db2st-mcp = "db2st_mcp.apps.server.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/AlexisMarasigan/db2st-mcp"
+Issues = "https://github.com/AlexisMarasigan/db2st-mcp/issues"
+
+[dependency-groups]
+dev = [
+  "ruff>=0.7.0",
+  "mypy>=1.13.0",
+  "pytest>=8.3.0",
+  "pytest-asyncio>=0.24.0",
+  "pytest-cov>=6.0.0",
+  "pytest-httpx>=0.34.0",
+  "respx>=0.21.0",
+  "vcrpy>=6.0.0",
+  "hypothesis>=6.115.0",
+  "pre-commit>=4.0.0",
+  "types-requests>=2.32.0",
+]
+
+[build-system]
+requires = ["hatchling>=1.25.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/db2st_mcp"]
+
+# ---------- ruff ----------
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+  "E", "W",   # pycodestyle
+  "F",        # pyflakes
+  "I",        # isort
+  "B",        # bugbear
+  "C4",       # comprehensions
+  "UP",       # pyupgrade
+  "ANN",      # annotations
+  "S",        # bandit (security)
+  "A",        # builtins shadowing
+  "RUF",      # ruff-specific
+  "SIM",      # simplify
+  "PT",       # pytest style
+  "TID",      # tidy imports
+  "PL",       # pylint subset
+]
+ignore = [
+  "ANN401",   # allow Any in narrow places
+  "PLR0913",  # arg count (Pydantic/FastAPI legitimately exceed)
+  "S101",    # asserts allowed in tests
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "S105", "S106", "PLR2004", "ANN"]
+"scripts/**/*.py" = ["S603", "S607"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["db2st_mcp"]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+# Enforce Clara: shared/ may not import from domains/ or apps/.
+# (Mechanical check supplemented by .claude/skills/verify-docs.)
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# ---------- mypy ----------
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+extra_checks = true
+files = ["src", "tests"]
+
+[[tool.mypy.overrides]]
+module = ["vcr.*", "upstash_redis.*"]
+ignore_missing_imports = true
+
+# ---------- pytest ----------
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = [
+  "-ra",
+  "--strict-markers",
+  "--strict-config",
+  "--cov=db2st_mcp",
+  "--cov-branch",
+  "--cov-report=term-missing",
+  "--cov-report=xml",
+  "--cov-fail-under=80",
+]
+asyncio_mode = "auto"
+markers = [
+  "integration: hits the real Schenker upstream (slow, networked)",
+  "e2e: full end-to-end against a running server",
+]
+
+[tool.coverage.run]
+source = ["src/db2st_mcp"]
+branch = true
+parallel = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+precision = 2
+exclude_lines = [
+  "pragma: no cover",
+  "raise NotImplementedError",
+  "if TYPE_CHECKING:",
+  "if __name__ == .__main__.:",
+]

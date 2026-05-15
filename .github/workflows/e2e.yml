@@ -1,0 +1,37 @@
+name: E2E
+
+on:
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 4 * * *"  # nightly 04:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  e2e:
+    name: End-to-end suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - run: uv python install 3.12
+      - run: uv sync --frozen --group dev
+      - name: Run E2E (writes docs/E2E-REPORT.md)
+        run: uv run pytest tests/e2e -m e2e --report
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: docs/E2E-REPORT.md
+      - name: Comment PR with E2E summary
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          path: docs/E2E-REPORT.md

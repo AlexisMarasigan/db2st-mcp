@@ -1,0 +1,31 @@
+specVersion: 0.36.0
+name: db2st-mcp
+runtime: python
+registry: ghcr.io/REPLACE_ME
+image: ghcr.io/REPLACE_ME/db2st-mcp:latest
+invocation:
+  format: http
+build:
+  builder: pack
+deploy:
+  namespace: db2st
+  annotations:
+    autoscaling.knative.dev/metric: concurrency
+    autoscaling.knative.dev/target: "50"
+    autoscaling.knative.dev/minScale: "0"
+    autoscaling.knative.dev/maxScale: "20"
+  options:
+    scale:
+      metric: concurrency
+      target: 50
+      min: 0
+      max: 20
+envs:
+  - name: LOG_LEVEL
+    value: info
+  - name: TOKEN_STORE
+    value: upstash
+  - name: UPSTASH_REDIS_REST_URL
+    value: "{{ secret:upstash-creds:url }}"
+  - name: UPSTASH_REDIS_REST_TOKEN
+    value: "{{ secret:upstash-creds:token }}"
