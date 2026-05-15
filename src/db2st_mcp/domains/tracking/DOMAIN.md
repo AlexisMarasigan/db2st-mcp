@@ -16,10 +16,14 @@ Given a Schenker tracking reference, return structured shipment data:
 
 | Symbol | Where | What |
 |---|---|---|
-| `Shipment`, `Party`, `PackageInfo`, `TrackingEvent` | `shared/schemas.py` | Pydantic models (contract). |
-| `TrackingError` | `shared/errors.py` | Domain-scoped error subclasses. |
-| `SchenkerClient.fetch(ref)` | `server/schenker_client.py` | Raw fetch → normalized. |
-| `track_shipment_tool(args)` | `server/tool.py` | MCP tool handler. Registered by `apps/server`. |
+| `Shipment`, `Party`, `Address`, `PackageInfo`, `TrackingEvent`, `ShipmentType` | `shared/schemas.py` | Pydantic models (contract). |
+| `SchenkerClient.resolve(ref)`, `.fetch_detail(type, id)` | `server/schenker_client.py` | Two-step upstream fetch (resolver → detail). |
+| `TrackingService.get_shipment(ref)` | `server/service.py` | Orchestrator: cache → breaker → client → fallback. |
+| `track_shipment(args, service=...)` | `server/tool.py` | Async MCP tool handler. Registered by `apps/server`. |
+| `PlaywrightHtmlFallback` | `server/html_fallback.py` | Optional HTML scrape fallback (sprint 4). |
+
+Domain errors come from `db2st_mcp.shared.errors` (`NotFoundError`,
+`UpstreamUnavailableError`, `ParseError`, `InvalidInputError`).
 
 ## Contracts
 
@@ -53,15 +57,18 @@ The MCP tool returns `Shipment.model_dump(mode="json")`.
 
 | File | Role |
 |---|---|
-| `server/schenker_client.py` | HTTP client; tries JSON API first, HTML scrape only as fallback. |
+| `server/schenker_client.py` | HTTP client. Hits the DSV public JSON API. |
 | `server/parser.py` | Raw upstream → `Shipment`. Isolated for schema-drift tests. |
-| `server/tool.py` | Thin MCP tool handler; calls client + maps errors. |
+| `server/service.py` | Orchestrator. Owns cache + circuit breaker + fallback wiring. |
+| `server/tool.py` | Thin MCP tool handler; calls `TrackingService` and maps errors. |
+| `server/html_fallback.py` | Playwright SPA scrape — engaged when `DB2ST_HTML_FALLBACK=1`. |
 
 ## Upstream
 
-`https://www.dbschenker.com/app/tracking-public/` — the public SPA. Sprint 1
-investigation: confirm or refute the existence of a stable JSON endpoint by
-inspecting network calls; favour that over scraping.
+`https://mydsv.dsv.com/app/tracking-public/` — the post-DSV-acquisition home
+of the public SPA. The legacy `www.dbschenker.com/app/tracking-public`
+host 302-redirects here. JSON API at
+`/nges-portal/api/public/tracking-public`; see [docs/UPSTREAM.md](../../../../docs/UPSTREAM.md).
 
 ## Dependencies on other domains
 
@@ -94,3 +101,13 @@ Domain boundary contract lives in `shared/schemas.py`. The MCP tool schema is de
 
 **2026-05-16: Parser isolated from client.**
 A parser-only test suite lets us add upstream fixtures over time without rerunning network code, and surfaces schema drift fast.
+
+**2026-05-16: Orchestration lives in `service.py`, not the tool handler.**
+The MCP tool stays a one-liner; cache, circuit breaker, and HTML fallback
+wiring all live in `TrackingService.get_shipment`. Future tools can reuse
+the orchestrator without re-implementing the safety net.
+
+**2026-05-16: HTML fallback recognises the "Shipment not found" SPA marker.**
+The Playwright fallback raises `NotFoundError` instead of returning a
+misleading "scraped" event so the JSON path and the fallback agree on the
+error taxonomy.

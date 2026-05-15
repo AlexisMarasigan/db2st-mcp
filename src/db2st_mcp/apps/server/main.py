@@ -40,11 +40,14 @@ def build_app() -> FastAPI:
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         _log.info("app.starting", token_store=type(deps.token_store).__name__)
-        try:
-            yield
-        finally:
-            await deps.aclose()
-            _log.info("app.stopped")
+        # Compose the MCP transport's session-manager lifespan so its task
+        # group is initialized before the first request hits /mcp.
+        async with mcp.session_manager.run():
+            try:
+                yield
+            finally:
+                await deps.aclose()
+                _log.info("app.stopped")
 
     app = FastAPI(title="db2st-mcp", version="0.0.1", lifespan=lifespan)
     app.state.deps = deps

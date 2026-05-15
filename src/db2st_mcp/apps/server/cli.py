@@ -29,7 +29,7 @@ def _build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command")
 
     serve = sub.add_parser("serve", help="Start the HTTP server.")
-    serve.add_argument("--host", default="0.0.0.0")  # noqa: S104 — container default
+    serve.add_argument("--host", default="0.0.0.0")  # noqa: S104  # nosec B104
     serve.add_argument("--port", type=int, default=None)
     serve.add_argument("--reload", action="store_true")
 
