@@ -5,8 +5,8 @@ Sprint 0 ships the function so it can be unit-tested ahead of integration.
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
-from typing import Awaitable, Callable
 
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response

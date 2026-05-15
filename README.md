@@ -7,11 +7,41 @@ The first tool wraps DB Schenker's public shipment tracking endpoint. The shape 
 ## Quickstart
 
 ```bash
-uv sync                          # install deps
+uv sync --group dev              # install deps
 cp .env.example .env             # configure
-uv run db2st-mcp                 # start dev server on :8080
+uv run db2st-mcp serve           # start HTTP server on :8080
 uv run pytest                    # unit + integration tests
 uv run pytest tests/e2e --report # E2E + Markdown report
+```
+
+## Use as a local Claude Code MCP
+
+```bash
+# from the repo root
+uv sync --group dev
+claude mcp add db2st-mcp -s user -e TOKEN_STORE=memory \
+  -- uv --directory "$(pwd)" run db2st-mcp stdio
+
+# verify
+claude mcp list | grep db2st-mcp   # should show: ✓ Connected
+```
+
+Then ask Claude Code to track a shipment, e.g. `track DSV shipment 1806203236`.
+
+## Use as a deployed MCP (HTTP + auth)
+
+```bash
+# 1. start the server
+uv run db2st-mcp serve
+
+# 2. mint a token (one-time, secret is shown once)
+uv run db2st-mcp mint --plan pro --limit 10000
+
+# 3. call the MCP transport at /mcp with the bearer token
+curl https://your-host/mcp/ \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"track_shipment","arguments":{"reference":"1806203236"}}}'
 ```
 
 ## Architecture

@@ -40,9 +40,7 @@ class InMemoryTokenStore:
     async def lookup(self, secret: str) -> TokenRecord | None:
         return self._by_hash.get(_hash(secret))
 
-    async def consume(
-        self, token_id: str, day: date
-    ) -> RemainingQuota | Literal["exhausted"]:
+    async def consume(self, token_id: str, day: date) -> RemainingQuota | Literal["exhausted"]:
         record = next(
             (r for r in self._by_hash.values() if r.id == token_id),
             None,

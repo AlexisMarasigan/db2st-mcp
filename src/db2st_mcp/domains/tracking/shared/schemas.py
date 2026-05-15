@@ -1,6 +1,6 @@
 """tracking-domain Pydantic models.
 
-These are the contract between the MCP tool, the Schenker client, and the
+These are the contract between the MCP tool, the upstream client, and the
 parser. The tool output schema is derived from `Shipment`.
 """
 
@@ -8,8 +8,21 @@ from __future__ import annotations
 
 from datetime import datetime
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+
+ShipmentType = Literal[
+    "land",
+    "land_se",
+    "land_au",
+    "ocean",
+    "air",
+    "dsv",
+    "atol",
+    "cos",
+    "unknown",
+]
 
 
 class Address(BaseModel):
@@ -28,12 +41,12 @@ class Party(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    name: str
+    name: str = ""
     address: Address = Field(default_factory=Address)
 
 
 class PackageInfo(BaseModel):
-    """Package metadata. All fields optional; not every shipment exposes everything."""
+    """Package metadata. Fields optional; not every shipment exposes everything."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -42,6 +55,7 @@ class PackageInfo(BaseModel):
     width_cm: int | None = None
     height_cm: int | None = None
     piece_count: int = 1
+    volume_m3: Decimal | None = None
 
 
 class TrackingEvent(BaseModel):
@@ -56,12 +70,14 @@ class TrackingEvent(BaseModel):
 
 
 class Shipment(BaseModel):
-    """Top-level shipment record returned by the tool."""
+    """Top-level shipment record returned by the `track_shipment` tool."""
 
     model_config = ConfigDict(extra="forbid")
 
     reference: str
-    sender: Party
-    receiver: Party
-    package: PackageInfo
+    type: ShipmentType = "unknown"
+    sender: Party = Field(default_factory=Party)
+    receiver: Party = Field(default_factory=Party)
+    package: PackageInfo = Field(default_factory=PackageInfo)
     history: list[TrackingEvent] = Field(default_factory=list)
+    source: Literal["json", "html_fallback"] = "json"
