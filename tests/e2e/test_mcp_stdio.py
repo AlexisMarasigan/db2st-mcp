@@ -18,6 +18,7 @@ import asyncio
 import json
 import os
 import sys
+from collections.abc import AsyncIterator
 from typing import Any
 
 import pytest
@@ -41,7 +42,7 @@ async def _notify(proc: asyncio.subprocess.Process, method: str) -> None:
 
 
 @pytest.fixture
-async def mcp_subprocess() -> asyncio.subprocess.Process:
+async def mcp_subprocess() -> AsyncIterator[asyncio.subprocess.Process]:
     """Spawn `python -m db2st_mcp.apps.server.cli stdio` and yield it."""
     env = os.environ.copy()
     env["TOKEN_STORE"] = "memory"

@@ -13,6 +13,18 @@ permissions:
   security-events: write
 
 jobs:
+  bandit:
+    name: bandit (static analysis)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - run: uv python install 3.12
+      - name: Bandit (medium+ severity blocks)
+        run: uvx bandit -r src/ -ll --severity-level medium --confidence-level medium
+
   pip-audit:
     name: pip-audit (deps)
     runs-on: ubuntu-latest

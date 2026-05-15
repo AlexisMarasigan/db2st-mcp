@@ -12,11 +12,11 @@
 
 | Symbol | Where | What |
 |---|---|---|
-| `TokenRecord`, `TokenPlan` | `shared/schemas.py` | Persisted record (hash, plan, limit). |
-| `TokenStore` (Protocol) | `shared/protocols.py` | Storage contract. |
-| `AuthContext` | `shared/schemas.py` | What downstream code sees after auth. |
-| `InMemoryTokenStore`, `UpstashTokenStore` | `server/store.py` | Concrete stores. |
-| `bearer_auth_middleware` | `server/middleware.py` | Starlette/FastAPI middleware. |
+| `TokenRecord`, `TokenPlan`, `AuthContext` | `shared/schemas.py` | Persisted record + post-auth context. |
+| `TokenStore` (Protocol), `RemainingQuota` | `shared/protocols.py` | Storage contract + return-type alias. |
+| `InMemoryTokenStore` | `server/store.py` | In-memory dev store. |
+| `UpstashTokenStore` | `server/upstash_store.py` | Upstash-Redis-backed prod store (optional `[redis]` extra). |
+| `bearer_auth_middleware`, `authenticate` | `server/middleware.py` | Starlette/FastAPI middleware + the underlying coroutine. |
 
 ## Storage contract
 
