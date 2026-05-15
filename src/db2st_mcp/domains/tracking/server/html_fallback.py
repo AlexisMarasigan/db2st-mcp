@@ -19,7 +19,16 @@ from db2st_mcp.domains.tracking.shared.schemas import (
     ShipmentType,
     TrackingEvent,
 )
-from db2st_mcp.shared.errors import UpstreamUnavailableError
+from db2st_mcp.shared.errors import NotFoundError, UpstreamUnavailableError
+
+# Strings the SPA renders when the upstream resolver returns no record.
+# Detected here so the tool emits a proper NotFoundError rather than a
+# misleading "scraped" event.
+NOT_FOUND_MARKERS = (
+    "Shipment not found",
+    "No shipments were found",
+    "could not be found",
+)
 
 _log = structlog.get_logger(__name__)
 
@@ -61,6 +70,12 @@ class PlaywrightHtmlFallback:
         if not data:
             _log.warning("html_fallback.empty", reference=reference)
             return Shipment(reference=reference, source="html_fallback")
+
+        body = str(data.get("bodyText") or "")
+        if any(marker in body for marker in NOT_FOUND_MARKERS):
+            raise NotFoundError(
+                "shipment not found (html fallback)", details={"reference": reference}
+            )
 
         return _to_shipment(reference, data)
 
