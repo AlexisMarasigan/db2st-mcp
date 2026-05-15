@@ -24,7 +24,7 @@ jobs:
       - run: uv python install 3.12
       - run: uv sync --frozen --group dev
       - name: Run E2E (writes docs/E2E-REPORT.md)
-        run: uv run pytest tests/e2e -m e2e --report
+        run: uv run pytest tests/e2e -m e2e --report --no-cov
       - name: Upload report
         uses: actions/upload-artifact@v4
         with:

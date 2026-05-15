@@ -116,7 +116,17 @@ class SchenkerClient:
     ) -> dict[str, Any]:
         """Fetch the type-specific detail payload."""
         suffix = DETAIL_PATHS.get(type_hint, DETAIL_PATHS["unknown"])
-        return await self._get_json(f"/nges-portal/api/public/tracking-public{suffix}{upstream_id}")
+        payload = await self._get_json(
+            f"/nges-portal/api/public/tracking-public{suffix}{upstream_id}"
+        )
+        if not isinstance(payload, dict):
+            from db2st_mcp.shared.errors import ParseError
+
+            raise ParseError(
+                "expected object from detail endpoint",
+                details={"got": type(payload).__name__},
+            )
+        return payload
 
     # --- internals -----------------------------------------------------------
 

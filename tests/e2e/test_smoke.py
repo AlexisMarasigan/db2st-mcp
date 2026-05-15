@@ -1,6 +1,8 @@
-"""E2E smoke. Sprint 0: prove the harness + report generator round-trips.
+"""E2E smoke — replaced in iteration 3 by `test_mcp_stdio.py`.
 
-Sprint 1 will replace these with real MCP-client-against-server scenarios.
+Kept here so the harness has an extra cheap sanity check that the in-process
+FastAPI app boots and serves /healthz. The full MCP transport path is
+covered by `test_mcp_stdio.py`.
 """
 
 from __future__ import annotations
@@ -17,9 +19,3 @@ def test_healthz_e2e() -> None:
     client = TestClient(app)
     response = client.get("/healthz")
     assert response.status_code == 200
-
-
-@pytest.mark.skip(reason="MCP tool not wired yet — sprint 1 implements track_shipment")
-def test_track_shipment_against_sample_ref() -> None:
-    # Will hit the MCP transport with a Bearer token and call `track_shipment`.
-    raise AssertionError("placeholder")
