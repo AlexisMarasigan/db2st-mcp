@@ -45,8 +45,6 @@ def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[None]) ->
     if result.when != "call" and not (result.when == "setup" and result.skipped):
         return
 
-    state = item.session.config.cache.get("e2e_state", None) if hasattr(item.session.config, "cache") else None  # noqa: E501
-    # Stash via item.session for in-process access.
     bucket = getattr(item.session, "_e2e_results", None)
     if bucket is None:
         bucket = []
@@ -56,9 +54,12 @@ def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[None]) ->
     if result.skipped:
         skip_reason = str(result.longrepr) if result.longrepr else "skipped"
 
+    fspath = Path(item.fspath)
+    file_path = str(fspath.relative_to(Path.cwd())) if fspath.is_absolute() else str(fspath)
+
     bucket.append(
         {
-            "file": str(Path(item.fspath).relative_to(Path.cwd())) if Path(item.fspath).is_absolute() else str(item.fspath),  # noqa: E501
+            "file": file_path,
             "name": item.name,
             "outcome": result.outcome,
             "duration": result.duration,
@@ -71,7 +72,7 @@ def pytest_sessionstart(session: pytest.Session) -> None:
     session._e2e_started_at = time.time()  # type: ignore[attr-defined]
 
 
-def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:  # noqa: ARG001
+def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:  # noqa: PLR0915
     if not session.config.getoption("--report"):
         return
 

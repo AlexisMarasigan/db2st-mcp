@@ -1,17 +1,27 @@
 """`db2st-mcp` console entrypoint.
 
-Sprint 0: `serve` only. Sprint 2: `mint`, `tokens list`, `tokens revoke`.
+Subcommands:
+- `serve`               — start the FastAPI HTTP server (Streamable HTTP transport).
+- `stdio`               — start an MCP server on stdio (for local Claude Code MCP).
+- `mint --plan --limit` — mint a new bearer token (prints the secret once).
+- `tokens list`         — list known tokens.
+- `tokens revoke <id>`  — mark a token revoked.
 """
 
 from __future__ import annotations
 
 import argparse
+import asyncio
+import json
 import sys
-from typing import Sequence
+from collections.abc import Sequence
 
 import uvicorn
 
+from db2st_mcp.apps.server.dependencies import build_deps
+from db2st_mcp.apps.server.mcp_app import build_mcp_server
 from db2st_mcp.shared.config import get_settings
+from db2st_mcp.shared.logging import configure_logging
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -23,7 +33,97 @@ def _build_parser() -> argparse.ArgumentParser:
     serve.add_argument("--port", type=int, default=None)
     serve.add_argument("--reload", action="store_true")
 
+    sub.add_parser("stdio", help="Run as an MCP stdio server (for local Claude Code).")
+
+    mint = sub.add_parser("mint", help="Mint a new bearer token.")
+    mint.add_argument("--plan", choices=["free", "pro"], default="free")
+    mint.add_argument("--limit", type=int, default=100, help="Daily request limit.")
+
+    tokens = sub.add_parser("tokens", help="Manage tokens.")
+    tokens_sub = tokens.add_subparsers(dest="tokens_command")
+    tokens_sub.add_parser("list", help="List tokens.")
+    revoke = tokens_sub.add_parser("revoke", help="Revoke a token by id.")
+    revoke.add_argument("token_id")
+
     return parser
+
+
+def _cmd_serve(args: argparse.Namespace) -> int:
+    settings = get_settings()
+    uvicorn.run(
+        "db2st_mcp.apps.server.main:app",
+        host=args.host,
+        port=args.port or settings.port,
+        reload=args.reload,
+        log_config=None,
+    )
+    return 0
+
+
+def _cmd_stdio() -> int:
+    # Stdio transport must keep stdout clean for JSON-RPC framing; logs go to stderr.
+    configure_logging()
+    settings = get_settings()
+    deps = build_deps(settings)
+    mcp = build_mcp_server(deps.tracking_service)
+    try:
+        mcp.run(transport="stdio")
+        return 0
+    finally:
+        try:
+            asyncio.run(deps.aclose())
+        except RuntimeError:
+            # Event loop already closed by mcp.run — best-effort cleanup.
+            pass
+
+
+def _cmd_mint(args: argparse.Namespace) -> int:
+    settings = get_settings()
+    deps = build_deps(settings)
+
+    async def _run() -> dict[str, object]:
+        record, secret = await deps.token_store.mint(args.plan, args.limit)
+        return {
+            "id": record.id,
+            "plan": record.plan,
+            "daily_limit": record.daily_limit,
+            "secret": secret,
+            "warning": "store this secret now — it is not recoverable.",
+        }
+
+    result = asyncio.run(_run())
+    print(json.dumps(result, indent=2))
+    return 0
+
+
+def _cmd_tokens_list() -> int:
+    settings = get_settings()
+    deps = build_deps(settings)
+    records = asyncio.run(deps.token_store.list())
+    print(
+        json.dumps(
+            [
+                {
+                    "id": r.id,
+                    "plan": r.plan,
+                    "daily_limit": r.daily_limit,
+                    "created_at": r.created_at.isoformat(),
+                    "revoked_at": r.revoked_at.isoformat() if r.revoked_at else None,
+                }
+                for r in records
+            ],
+            indent=2,
+        )
+    )
+    return 0
+
+
+def _cmd_tokens_revoke(args: argparse.Namespace) -> int:
+    settings = get_settings()
+    deps = build_deps(settings)
+    asyncio.run(deps.token_store.revoke(args.token_id))
+    print(json.dumps({"id": args.token_id, "status": "revoked"}))
+    return 0
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -31,15 +131,18 @@ def main(argv: Sequence[str] | None = None) -> int:
     command = args.command or "serve"
 
     if command == "serve":
-        settings = get_settings()
-        uvicorn.run(
-            "db2st_mcp.apps.server.main:app",
-            host=args.host,
-            port=args.port or settings.port,
-            reload=args.reload,
-            log_config=None,
-        )
-        return 0
+        return _cmd_serve(args)
+    if command == "stdio":
+        return _cmd_stdio()
+    if command == "mint":
+        return _cmd_mint(args)
+    if command == "tokens":
+        if args.tokens_command == "list":
+            return _cmd_tokens_list()
+        if args.tokens_command == "revoke":
+            return _cmd_tokens_revoke(args)
+        print("tokens: missing subcommand (list|revoke)", file=sys.stderr)
+        return 2
 
     print(f"unknown command: {command}", file=sys.stderr)
     return 2

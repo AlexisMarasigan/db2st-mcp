@@ -29,6 +29,7 @@ dependencies = [
 
 [project.optional-dependencies]
 redis = ["upstash-redis>=1.2.0"]
+fallback = ["playwright>=1.48.0"]
 otel = [
   "opentelemetry-api>=1.27.0",
   "opentelemetry-sdk>=1.27.0",
@@ -92,7 +93,16 @@ select = [
 ignore = [
   "ANN401",   # allow Any in narrow places
   "PLR0913",  # arg count (Pydantic/FastAPI legitimately exceed)
-  "S101",    # asserts allowed in tests
+  "PLR0911",  # return count (CLI dispatchers have many)
+  "PLC0415",  # lazy/optional imports are intentional
+  "S101",     # asserts allowed in tests
+  "S105",     # token_store enum literal is a config value, not a secret
+  "SIM105",   # explicit try/except is clearer than contextlib.suppress here
+  "S110",     # cosmetic-enrichment try/except is intentional
+  "RUF002",   # allow en-dashes in docstrings
+  "E501",     # line length is enforced by ruff format; reduce false positives
+  "PLR2004",  # HTTP status codes are universally known constants
+  "UP046",    # Generic[T] is still idiomatic on supported Pythons
 ]
 
 [tool.ruff.lint.per-file-ignores]
