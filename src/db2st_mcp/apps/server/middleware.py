@@ -22,7 +22,7 @@ async def request_id_middleware(
     token_id = getattr(request.state, "auth", None)
     bind: dict[str, object] = {"request_id": request_id, "path": request.url.path}
     if token_id is not None:
-        bind["token_id"] = token_id.token_id  # type: ignore[attr-defined]
+        bind["token_id"] = token_id.token_id
 
     structlog.contextvars.clear_contextvars()
     structlog.contextvars.bind_contextvars(**bind)

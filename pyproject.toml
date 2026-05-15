@@ -140,7 +140,7 @@ extra_checks = true
 files = ["src", "tests"]
 
 [[tool.mypy.overrides]]
-module = ["vcr.*", "upstash_redis.*"]
+module = ["upstash_redis.*", "opentelemetry.*"]
 ignore_missing_imports = true
 
 # ---------- pytest ----------

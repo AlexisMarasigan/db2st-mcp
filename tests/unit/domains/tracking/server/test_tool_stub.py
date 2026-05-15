@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import pytest
 
-from db2st_mcp.domains.tracking.server.service import TrackingService
 from db2st_mcp.domains.tracking.server.tool import (
     TrackShipmentArgs,
     track_shipment,
@@ -16,12 +15,14 @@ from db2st_mcp.domains.tracking.server.tool import (
 from db2st_mcp.domains.tracking.shared.schemas import Shipment
 
 
-class _FakeService(TrackingService):  # type: ignore[misc]
+class _FakeService:
+    """Stand-in matching the subset of TrackingService that the tool uses."""
+
     def __init__(self) -> None:
         self.called_with: str | None = None
         self._shipment = Shipment(reference="X", type="land_se")
 
-    async def get_shipment(self, reference: str) -> Shipment:  # type: ignore[override]
+    async def get_shipment(self, reference: str) -> Shipment:
         self.called_with = reference
         return self._shipment
 

@@ -17,9 +17,11 @@ def test_opens_after_threshold_failures() -> None:
     cb = CircuitBreaker(failure_threshold=3, cooldown_seconds=10)
     cb.record_failure()
     cb.record_failure()
-    assert cb.state == "closed"
+    before = cb.state
+    assert before == "closed"
     cb.record_failure()
-    assert cb.state == "open"
+    after = cb.state
+    assert after == "open"
     assert cb.open is True
 
 
@@ -34,9 +36,11 @@ def test_success_resets_failure_count() -> None:
 def test_half_open_after_cooldown() -> None:
     cb = CircuitBreaker(failure_threshold=1, cooldown_seconds=0.02)
     cb.record_failure()
-    assert cb.state == "open"
+    before_cooldown = cb.state
+    assert before_cooldown == "open"
     time.sleep(0.03)
-    assert cb.state == "half_open"
+    after_cooldown = cb.state
+    assert after_cooldown == "half_open"
 
 
 def test_record_success_closes_after_recovery() -> None:

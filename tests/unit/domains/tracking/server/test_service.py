@@ -8,6 +8,7 @@ import respx
 
 from db2st_mcp.domains.tracking.server.schenker_client import SchenkerClient
 from db2st_mcp.domains.tracking.server.service import TrackingService
+from db2st_mcp.domains.tracking.shared.schemas import Shipment
 from db2st_mcp.shared.cache import TTLCache
 from db2st_mcp.shared.circuit_breaker import CircuitBreaker
 from db2st_mcp.shared.errors import UpstreamUnavailableError
@@ -51,7 +52,7 @@ async def test_service_happy_path_returns_parsed_shipment() -> None:
 @pytest.mark.asyncio
 async def test_service_cache_returns_hit_without_calling_upstream() -> None:
     client = _make_client()
-    cache: TTLCache = TTLCache(maxsize=4, ttl_seconds=60)
+    cache: TTLCache[Shipment] = TTLCache(maxsize=4, ttl_seconds=60)
     service = TrackingService(client, cache=cache)
 
     with respx.mock(base_url=API) as mock:

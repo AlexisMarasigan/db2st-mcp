@@ -48,7 +48,7 @@ class TestParseResolver:
 
     def test_raises_parse_error_on_non_list(self) -> None:
         with pytest.raises(ParseError):
-            parse_resolver({"shipments": "nope"})  # type: ignore[arg-type]
+            parse_resolver({"shipments": "nope"})
 
 
 # --- detail -----------------------------------------------------------------
