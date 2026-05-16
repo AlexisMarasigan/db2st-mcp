@@ -147,7 +147,7 @@ warn_no_return = true
 warn_unreachable = true
 strict_equality = true
 extra_checks = true
-files = ["src", "tests"]
+files = ["src", "tests", "scripts"]
 
 [[tool.mypy.overrides]]
 module = ["upstash_redis.*", "opentelemetry.*"]
