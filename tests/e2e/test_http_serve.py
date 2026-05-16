@@ -24,6 +24,8 @@ import sys
 import httpx
 import pytest
 
+from tests.e2e.conftest import terminate_cleanly
+
 pytestmark = pytest.mark.e2e
 
 
@@ -99,6 +101,4 @@ async def test_serve_boots_and_rejects_unauthenticated_mcp_call() -> None:
         # the process won't exit within the budget; the helper's
         # assert makes that fail loud rather than passing under
         # the SIGKILL fallback.
-        from tests.e2e.conftest import terminate_cleanly
-
         await terminate_cleanly(proc)
