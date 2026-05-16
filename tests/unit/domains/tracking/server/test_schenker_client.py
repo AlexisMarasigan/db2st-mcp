@@ -91,6 +91,55 @@ async def test_fetch_detail_dispatches_to_land_se_endpoint(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("type_hint", "suffix"),
+    [
+        ("land", "/shipment/land/"),
+        ("land_au", "/shipment/au/"),
+        ("ocean", "/shipment/ocean/"),
+        ("air", "/shipment/air/"),
+        ("dsv", "/shipments/dsv/"),
+        ("atol", "/shipments/atol/"),
+        ("cos", "/shipments/cos/"),
+        ("unknown", "/shipment/land/"),  # safe default
+    ],
+)
+async def test_fetch_detail_dispatch_table(
+    client: SchenkerClient, type_hint: str, suffix: str
+) -> None:
+    payload = {"sender": {"name": "S"}, "receiver": {"name": "R"}}
+    upstream_id = "X-REF"
+    with respx.mock(base_url=API) as mock:
+        mock.get("/app/tracking-public/").respond(200, html="<html/>")
+        route = mock.get(
+            f"/nges-portal/api/public/tracking-public{suffix}{upstream_id}"
+        ).respond(200, json=payload)
+        await client.fetch_detail(type_hint, upstream_id)  # type: ignore[arg-type]
+    assert route.called
+    await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_fetch_detail_raises_parse_error_for_non_dict_payload(
+    client: SchenkerClient,
+) -> None:
+    """Upstream returning a JSON array or scalar where a shipment object
+    is expected should surface as a domain-level ParseError, not propagate
+    a TypeError out of the parser.
+    """
+    from db2st_mcp.shared.errors import ParseError
+
+    with respx.mock(base_url=API) as mock:
+        mock.get("/app/tracking-public/").respond(200, html="<html/>")
+        mock.get(
+            "/nges-portal/api/public/tracking-public/shipments/land/se/X-REF"
+        ).respond(200, json=["not", "a", "dict"])
+        with pytest.raises(ParseError):
+            await client.fetch_detail("land_se", "X-REF")
+    await client.aclose()
+
+
+@pytest.mark.asyncio
 async def test_xsrf_token_is_forwarded_as_header(client: SchenkerClient) -> None:
     with respx.mock(base_url=API) as mock:
         mock.get("/app/tracking-public/").respond(
