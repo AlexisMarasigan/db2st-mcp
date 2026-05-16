@@ -24,6 +24,7 @@ from starlette.routing import Route
 from starlette.testclient import TestClient
 
 from db2st_mcp.apps.server.middleware import request_id_middleware
+from tests.conftest import SpyLogger
 
 UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 
@@ -83,7 +84,6 @@ def test_route_exception_propagates_via_500(monkeypatch: pytest.MonkeyPatch) -> 
     can correlate by request_id.
     """
     from db2st_mcp.apps.server import middleware as rim_module
-    from tests.conftest import SpyLogger
 
     spy = SpyLogger()
     monkeypatch.setattr(rim_module, "_log", spy)
