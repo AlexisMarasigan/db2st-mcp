@@ -9,6 +9,28 @@ land on `main` without a bump.
 
 ### Fixed
 
+- **Upstash errors on the auth hot path now map to
+  `UpstreamUnavailableError`** instead of bubbling raw httpx /
+  `UpstashError` exceptions through the middleware to a 500 with
+  traceback. Same fix pattern as iter-145 (Playwright) and
+  iter-171 (Pydantic): wrap external-library calls and translate
+  to the project's `Db2stError` taxonomy. Constructor caches the
+  expected error tuple `(httpx.HTTPError, UpstashError)`; `lookup`
+  and `consume` re-raise with `{cause: <exc class name>}`. Admin
+  CLI paths (`mint` / `revoke` / `list`) left unwrapped — raw
+  traceback is acceptable for an operator. Pinned by two tests
+  monkey-patching `_redis.get`/`incr` to raise.
+- **Tracking cache failures degrade instead of propagate.**
+  `TrackingService.get_shipment` was awaiting
+  `self._cache.get/set` directly — with `RESPONSE_CACHE_BACKEND=
+  upstash` + Upstash down, a `get()` failure would propagate to
+  a 500 (even though the upstream path is healthy), and a `set()`
+  failure would lose an already-fetched shipment. Extracted
+  `_cache_get` / `_cache_set` helpers that log warnings
+  (`tracking.cache_get_failed` / `cache_set_failed`) and degrade
+  to miss / no-op respectively. Design principle made explicit:
+  the cache is a latency optimisation, not a correctness
+  dependency. Pinned by two tests with broken-cache stubs.
 - **CI security workflow was failing on B104** (`hardcoded_bind_all_interfaces`
   on `cli.py`'s `--host 0.0.0.0` argparse default). Iter-79 had
   removed `# nosec B104` based on bandit's then-behaviour of
