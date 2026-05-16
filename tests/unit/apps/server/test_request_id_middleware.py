@@ -75,13 +75,22 @@ def test_request_id_does_not_touch_token_id(app: Starlette) -> None:
     assert "token_id" not in ctx
 
 
-def test_route_exception_propagates_via_500() -> None:
+def test_route_exception_propagates_via_500(monkeypatch: pytest.MonkeyPatch) -> None:
     """A route exception travels through the middleware's
     `except Exception: _log.exception; raise` branch. The exception
     propagates to Starlette's exception middleware (HTTP 500); the
-    contextvars stay bound so the captured log line carries request_id
-    + path.
+    captured log call records the `request.failed` event so an SRE
+    can correlate by request_id.
     """
+    from db2st_mcp.apps.server import middleware as rim_module
+
+    calls: list[tuple[str, str]] = []
+
+    class _SpyLogger:
+        def exception(self, event: str, **_kw: object) -> None:
+            calls.append(("exception", event))
+
+    monkeypatch.setattr(rim_module, "_log", _SpyLogger())
 
     async def boom(_request):  # type: ignore[no-untyped-def]
         msg = "synthetic explosion"
@@ -94,3 +103,7 @@ def test_route_exception_propagates_via_500() -> None:
         response = client.get("/boom")
 
     assert response.status_code == 500
+    # Without this assertion, removing the `_log.exception(...)` line
+    # leaves the test green -- the original test only checked the 500
+    # status, not that the exception was actually logged.
+    assert ("exception", "request.failed") in calls
