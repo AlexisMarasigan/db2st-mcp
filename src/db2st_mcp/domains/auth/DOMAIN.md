@@ -55,8 +55,10 @@ None.
 
 ## Tests
 
-- `tests/unit/domains/auth/server/` — store implementations, middleware.
-- `tests/integration/test_auth.py` — happy path + 401 + 429 against the live server.
+- `tests/unit/domains/auth/server/` — store implementations, middleware
+  (401, 429 quota-exhausted paths included).
+- `tests/unit/apps/server/test_http_transport.py` — confirms the
+  middleware is wired into the FastAPI app.
 
 ## Decision Log
 

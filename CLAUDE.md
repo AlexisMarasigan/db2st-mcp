@@ -52,7 +52,7 @@ tests/
 3. **One page rule.** ARCHITECTURE.md ≤ 1 page. APP.md ≤ 1 page. DOMAIN.md ≤ 2 pages. If a doc grows past, split or simplify the system.
 4. **Decision log at the bottom of every doc.** Every non-obvious choice gets one line + reason.
 5. **If it's obvious from the code, don't document it.**
-6. **Tests mirror src layout.** Touching `domains/tracking/server/foo.py` ⇒ tests at `tests/unit/domains/tracking/server/test_foo.py`.
+6. **Tests mirror src layout.** A file under `src/db2st_mcp/foo/bar.py` gets tests at the same path under `tests/unit/foo/test_bar.py`.
 7. **Conventional Commits.** `feat:`, `fix:`, `chore:`, `refactor:`, `docs:`, `test:`, `release:`. Optional scope: `feat(tracking): ...`.
 
 ## Engineering posture

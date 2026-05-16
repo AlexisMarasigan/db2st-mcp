@@ -85,9 +85,12 @@ None.
 
 ## Tests
 
-- `tests/unit/domains/tracking/server/` — parser, client (recorded fixtures).
-- `tests/integration/test_tracking.py` — hits real Schenker for sample refs (marked `integration`).
-- `tests/e2e/` — full server + MCP client, also runs against sample refs.
+- `tests/unit/domains/tracking/server/` — parser, parser helpers, client,
+  service orchestrator, HTML fallback, tool handler.
+- `tests/integration/test_real_upstream.py` — parametrises every sample
+  reference against the live DSV upstream (marked `integration`,
+  deselected by default).
+- `tests/e2e/test_mcp_stdio.py` — full server + MCP client over stdio.
 
 ## Sample references (from the original brief)
 
