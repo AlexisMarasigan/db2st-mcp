@@ -53,3 +53,14 @@ async def test_revoke_marks_revoked_at() -> None:
     all_records = await store.list()
 
     assert all_records[0].revoked_at is not None
+
+
+@pytest.mark.asyncio
+async def test_consume_unknown_token_id_returns_exhausted() -> None:
+    """Defensive: calling `consume` with a token id the store has never
+    minted returns "exhausted" instead of raising. Matches the upstash
+    store's contract for the same input.
+    """
+    store = InMemoryTokenStore()
+    outcome = await store.consume("never-minted", datetime.now(UTC).date())
+    assert outcome == "exhausted"
