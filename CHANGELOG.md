@@ -17,6 +17,19 @@ land on `main` without a bump.
   exits 1 on Medium. Restored the annotation alongside the
   existing `# noqa: S104` (ruff). Caught locally by running the
   exact CI command; would have failed on the next push.
+- CONTRIBUTING.md "Run locally before pushing" gained the exact
+  bandit invocation that CI runs
+  (`uv run --with bandit bandit -r src/ scripts/ --severity-level
+  low --confidence-level low`) so contributors catch security-
+  workflow breakers before push. Iter-158 cited as the concrete
+  "why this command" example. Also clarifies that pre-commit does
+  NOT include bandit, so the explicit run is load-bearing.
+- ROADMAP Sprint 4 entry for "Schema-drift detector" was minimal
+  (just the module name). Expanded to describe both call sites
+  added in iter-126 (resolver + detail with per-mode endpoint
+  key) plus the two emitted events (`schema.first_seen`,
+  `schema.drift`) so the box-state history (iter-78 unchecked →
+  iter-126 restored) is discoverable from the ROADMAP itself.
 - ROADMAP Sprint 4 entry for "Public demo endpoint" said "Tracked
   in Stretch" but the Stretch section never had that entry —
   same cross-reference drift class as iter-89's upstream-table
