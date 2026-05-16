@@ -40,7 +40,12 @@ def build_app() -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-        _log.info("app.starting", token_store=type(deps.token_store).__name__)
+        cache = deps.tracking_service._cache
+        _log.info(
+            "app.starting",
+            token_store=type(deps.token_store).__name__,
+            cache_backend=type(cache).__name__ if cache is not None else "none",
+        )
         # Compose the MCP transport's session-manager lifespan so its task
         # group is initialized before the first request hits /mcp.
         async with mcp.session_manager.run():
