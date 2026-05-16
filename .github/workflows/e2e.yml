@@ -35,3 +35,19 @@ jobs:
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           path: docs/E2E-REPORT.md
+
+  integration:
+    name: Real-upstream integration (nightly + manual only)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true  # upstream rate-limiting can't break the PR pipeline
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - run: uv python install 3.12
+      - run: uv sync --frozen --group dev
+      - name: Real upstream — sample refs
+        run: uv run pytest tests/integration -m integration --no-cov -v

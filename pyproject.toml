@@ -157,6 +157,10 @@ addopts = [
   "--cov-report=term-missing",
   "--cov-report=xml",
   "--cov-fail-under=80",
+  # Default run excludes networked / live-upstream tests. Opt in with
+  # `pytest -m integration` when you want to hit DSV directly.
+  "-m",
+  "not integration",
 ]
 asyncio_mode = "auto"
 markers = [
