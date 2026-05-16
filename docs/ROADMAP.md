@@ -18,7 +18,11 @@ Phased plan. Each sprint ends with a runnable, demonstrable artifact.
 - [x] `track_shipment` tool with Pydantic in/out schemas
 - [x] Schenker client: investigate JSON endpoint first, HTML fallback only if needed
 - [x] Map raw upstream → `{sender, receiver, package, history[]}`
-- [x] Unit tests with recorded fixtures (`vcrpy` or hand-rolled)
+- [x] Unit tests with hand-rolled JSON fixtures + `respx` for httpx
+      transport mocking. (Sprint-1 plan listed `vcrpy` as an option;
+      we ended up not needing recorded HTTP cassettes — every
+      upstream interaction is small enough to fixture directly. The
+      `vcrpy` dev dep was dropped in iter 97.)
 - [x] Integration test against the 11 sample refs from the brief
 
 **Exit:** MCP Inspector calls `track_shipment` and returns structured data for every sample ref.
