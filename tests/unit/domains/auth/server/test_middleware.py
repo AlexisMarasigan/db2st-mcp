@@ -107,9 +107,7 @@ def test_auth_failure_logs_distinguish_cause(spy_log: SpyLogger) -> None:
     client.get("/protected")  # missing
     client.get("/protected", headers={"Authorization": "Bearer nope"})  # unknown
 
-    reasons = {
-        kw.get("reason") for event, kw in spy_log.calls if event == "auth.failure"
-    }
+    reasons = {kw.get("reason") for event, kw in spy_log.calls if event == "auth.failure"}
     assert "header_missing_or_malformed" in reasons
     assert "token_unknown" in reasons
 
@@ -132,9 +130,7 @@ async def test_quota_exhaustion_emits_log_with_token_id(
     response = client.get("/protected", headers={"Authorization": f"Bearer {secret}"})
     assert response.status_code == 429
 
-    quota_events = [
-        kw for event, kw in spy_log.calls if event == "auth.quota_exhausted"
-    ]
+    quota_events = [kw for event, kw in spy_log.calls if event == "auth.quota_exhausted"]
     assert len(quota_events) == 1
     assert quota_events[0]["token_id"] == record.id
     assert quota_events[0]["plan"] == "free"

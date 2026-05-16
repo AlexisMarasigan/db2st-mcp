@@ -295,9 +295,9 @@ async def test_drift_detector_is_called_on_resolver_and_detail(
         mock.get("/nges-portal/api/public/tracking-public/shipments").respond(
             200, json=[{"id": "1806203236", "type": "land_se"}]
         )
-        mock.get(
-            "/nges-portal/api/public/tracking-public/shipments/land/se/1806203236"
-        ).respond(200, json={"id": "1806203236"})
+        mock.get("/nges-portal/api/public/tracking-public/shipments/land/se/1806203236").respond(
+            200, json={"id": "1806203236"}
+        )
         await client.resolve("1806203236")
         await client.fetch_detail("land_se", "1806203236")
 
