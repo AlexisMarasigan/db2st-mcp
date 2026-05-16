@@ -54,11 +54,20 @@ uv run db2st-mcp mint --plan pro --limit 10000
 
 # 3. call the MCP transport at /mcp with the bearer token.
 #    Streamable HTTP requires the Accept header to list both types.
+
+# 3a. Full shipment record:
 curl https://your-host/mcp/ \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -H 'Accept: application/json, text/event-stream' \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"track_shipment","arguments":{"reference":"1806203236"}}}'
+
+# 3b. Events timeline only (lighter — for poll-style clients):
+curl https://your-host/mcp/ \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"track_shipment_events","arguments":{"reference":"1806203236"}}}'
 ```
 
 ## Architecture
