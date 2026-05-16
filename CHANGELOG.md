@@ -42,6 +42,21 @@ land on `main` without a bump.
   lines updated. Same honesty pattern as iter 55.
 - `.gitignore` had a duplicate `dist/` entry (one near the top, one
   later); deduped.
+- `docs/KNATIVE.md` had two stale claims that implied
+  load-driven autoscaler tuning had happened. Reworded the
+  Autoscaling-notes section to call out the values as reasoned
+  defaults pending cluster execution, and added a 2026-05-16
+  Decision Log entry stating that cluster execution + load-test +
+  autoscaler tuning are deferred until a `kind`/`kubectl`/`func`-
+  capable host is available. Same honesty pattern as iter 78's
+  ROADMAP edit, applied at the deployment-doc layer.
+- Bandit was emitting 9 spurious `Test in comment: <word> is not a
+  test name or id, ignoring` WARNINGs every CI run. The cause:
+  trailing rationale text after `# nosec BXXX` was being parsed as
+  more test IDs. Moved the rationale to a preceding `#` comment
+  block on 4 sites; dropped one stale `# nosec B104` annotation
+  that bandit was reporting as unused. `Total potential issues
+  skipped` 6 → 5; WARNINGs 9 → 0.
 
 ### Added
 
