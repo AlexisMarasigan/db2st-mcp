@@ -39,6 +39,18 @@ taxonomy, response cache (in-memory + Upstash-backed), circuit
 breaker, schema-drift detector, optional OpenTelemetry hooks.
 Imported by domains and apps. Never imports from them.
 
+## Observability
+
+Structured JSON logs to stderr (structlog). Every request gets a
+`request_id` bound to contextvars; authenticated requests also bind
+`token_id` + `plan`. Operationally-meaningful events are named
+under a `<domain>.<verb>` convention — see each domain's
+Observability section ([auth](docs/AUTH.md#observability),
+[tracking](src/db2st_mcp/domains/tracking/DOMAIN.md#observability))
+for the full inventory of event names + fields. OpenTelemetry
+tracing is opt-in via `OTEL_EXPORTER_OTLP_ENDPOINT` and the
+`[otel]` extra.
+
 ## Domain dependency graph
 
 ```
