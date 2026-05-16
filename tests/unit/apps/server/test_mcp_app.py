@@ -65,6 +65,26 @@ async def test_track_shipment_tool_propagates_validation_errors() -> None:
 
 
 @pytest.mark.asyncio
+async def test_track_shipment_validation_error_is_clean_not_pydantic_raw() -> None:
+    """Iter-170 caught raw Pydantic errors leaking the args-schema class
+    name + Pydantic version + errors.pydantic.dev URL into the MCP wire
+    response. The handler now catches ValidationError and re-raises as
+    a clean InvalidInputError. Pins that the leaked tokens are gone."""
+    stub = _StubService(Shipment(reference="X", type="unknown"))
+    mcp = build_mcp_server(stub)  # type: ignore[arg-type]
+
+    try:
+        await mcp.call_tool("track_shipment", arguments={"reference": "a"})
+    except Exception as e:
+        msg = str(e)
+
+    # None of these tokens should appear in the wire response.
+    leaks = ("TrackShipmentArgs", "pydantic.dev", "type=string_too_short")
+    for token in leaks:
+        assert token not in msg, f"wire response leaked Pydantic internal: {token!r}"
+
+
+@pytest.mark.asyncio
 async def test_track_shipment_events_tool_returns_event_list() -> None:
     """The second registered tool returns just the timeline (sender /
     receiver / package omitted). Useful for poll-style clients.
