@@ -22,7 +22,19 @@ cp .env.example .env         # adjust as needed
    uv run ruff format .
    uv run mypy
    uv run pytest
+   uv run python scripts/verify_docs.py
    ```
+
+   Or — one command that runs every pre-commit hook against the whole
+   tree (catches more than per-file commit hooks alone, since some hooks
+   only flag issues across files):
+   ```bash
+   uv run pre-commit run --all-files
+   ```
+
+   On macOS without local Go installed, the `gitleaks` hook can't build.
+   Skip it explicitly: `SKIP=gitleaks uv run pre-commit run --all-files`.
+   CI runs gitleaks unconditionally.
 6. **Open a PR.** CI will run lint, typecheck, tests on py3.12 + py3.13, E2E (writes `docs/E2E-REPORT.md`), and security scans.
 
 ## Commit messages
