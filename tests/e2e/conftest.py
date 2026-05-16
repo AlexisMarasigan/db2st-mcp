@@ -1,9 +1,11 @@
 """E2E test infrastructure.
 
-- Adds the `--report` CLI flag.
 - Collects per-test timing and outcome.
 - Writes a Markdown report at `docs/E2E-REPORT.md` mirroring the team's
   reference format (overview, summary, skipped table, slow-test table).
+
+The `--report` CLI flag is registered in the root `tests/conftest.py`
+so it is recognised regardless of which test path is passed.
 """
 
 from __future__ import annotations
@@ -18,15 +20,6 @@ import pytest
 
 REPORT_PATH = Path("docs/E2E-REPORT.md")
 SLOW_THRESHOLD_S = 10.0
-
-
-def pytest_addoption(parser: pytest.Parser) -> None:
-    parser.addoption(
-        "--report",
-        action="store_true",
-        default=False,
-        help="Write the Markdown E2E report to docs/E2E-REPORT.md.",
-    )
 
 
 @pytest.fixture(scope="session")
