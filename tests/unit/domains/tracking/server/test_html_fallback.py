@@ -85,6 +85,7 @@ def _stub_playwright_returning(monkeypatch: pytest.MonkeyPatch, payload: dict[st
 
     fake_module = types.ModuleType("playwright.async_api")
     fake_module.async_playwright = _PW  # type: ignore[attr-defined]
+    fake_module.Error = type("Error", (Exception,), {})  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "playwright", types.ModuleType("playwright"))
     monkeypatch.setitem(sys.modules, "playwright.async_api", fake_module)
 
@@ -144,6 +145,7 @@ async def test_fetch_returns_empty_shipment_when_extraction_yields_nothing(
 
     fake_module = types.ModuleType("playwright.async_api")
     fake_module.async_playwright = _PW  # type: ignore[attr-defined]
+    fake_module.Error = type("Error", (Exception,), {})  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "playwright", types.ModuleType("playwright"))
     monkeypatch.setitem(sys.modules, "playwright.async_api", fake_module)
 
@@ -151,3 +153,58 @@ async def test_fetch_returns_empty_shipment_when_extraction_yields_nothing(
     shipment = await fb.fetch("Z")
     assert shipment.reference == "Z"
     assert shipment.source == "html_fallback"
+
+
+@pytest.mark.asyncio
+async def test_fetch_maps_playwright_error_to_upstream_unavailable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Real failure caught live this session: `Page.goto` timed out
+    after 30s and the raw Playwright TimeoutError bubbled up to the
+    MCP wire response. The fallback now catches everything that
+    inherits from `playwright.async_api.Error` and maps to
+    UpstreamUnavailableError so the response stays in the project's
+    error taxonomy and the breaker counts the failure."""
+    from db2st_mcp.shared.errors import UpstreamUnavailableError
+
+    class _PlaywrightError(Exception):
+        """Stand-in for `playwright.async_api.Error`."""
+
+    class _Page:
+        async def goto(self, *a: object, **kw: object) -> None:
+            raise _PlaywrightError("Page.goto: Timeout 30000ms exceeded")
+
+        async def evaluate(self, *a: object) -> dict[str, object]:
+            return {}  # never reached
+
+    class _Ctx:
+        async def new_page(self) -> _Page:
+            return _Page()
+
+    class _Browser:
+        async def new_context(self, **kw: object) -> _Ctx:
+            return _Ctx()
+
+        async def close(self) -> None: ...
+
+    class _Chromium:
+        async def launch(self, **kw: object) -> _Browser:
+            return _Browser()
+
+    class _PW:
+        chromium = _Chromium()
+
+        async def __aenter__(self) -> _PW:
+            return self
+
+        async def __aexit__(self, *a: object) -> None: ...
+
+    fake_module = types.ModuleType("playwright.async_api")
+    fake_module.async_playwright = _PW  # type: ignore[attr-defined]
+    fake_module.Error = _PlaywrightError  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "playwright", types.ModuleType("playwright"))
+    monkeypatch.setitem(sys.modules, "playwright.async_api", fake_module)
+
+    fb = PlaywrightHtmlFallback()
+    with pytest.raises(UpstreamUnavailableError, match="html fallback failed"):
+        await fb.fetch("X-REF")
