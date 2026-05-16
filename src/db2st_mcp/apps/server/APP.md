@@ -28,10 +28,11 @@ FastAPI app
 
 | File | Role |
 |---|---|
-| `main.py` | Builds the FastAPI app. Module-level `app` for ASGI servers. |
-| `cli.py` | `db2st-mcp` console entrypoint. `serve`, `mint`, `tokens` subcommands. |
-| `routes.py` | Health probe + introspection routes (not the MCP transport). |
-| `dependencies.py` | DI wiring: token store, schenker client. |
+| `main.py` | Builds the FastAPI app. Module-level `app` for ASGI servers. Mounts `/healthz` and the MCP transport. |
+| `cli.py` | `db2st-mcp` console entrypoint. `serve`, `stdio`, `mint`, `tokens` subcommands. |
+| `mcp_app.py` | Registers the MCP tools (`track_shipment`, `track_shipment_events`) against the FastMCP server. |
+| `middleware.py` | `request_id_middleware` — generates / propagates `X-Request-ID` and binds it to structlog contextvars. |
+| `dependencies.py` | DI wiring: token store, schenker client, tracking service, response cache backend. |
 
 ## Boot order
 
