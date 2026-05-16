@@ -23,7 +23,10 @@ jobs:
           enable-cache: true
       - run: uv python install 3.12
       - name: Bandit (all severities — `# nosec BXXX` annotations carry the rationale)
-        run: uvx bandit -r src/ --severity-level low --confidence-level low
+        # Scan production code (src/) *and* the executable scripts in scripts/
+        # (verify_docs.py, sync_domain.py, example_call.py) — they're shipped
+        # alongside the wheel and run with the same privileges in CI / dev.
+        run: uvx bandit -r src/ scripts/ --severity-level low --confidence-level low
 
   pip-audit:
     name: pip-audit (deps)

@@ -25,8 +25,10 @@ async def _send(
     payload: dict[str, object],
     timeout: float = 45.0,
 ) -> dict[str, object]:
-    assert proc.stdin is not None
-    assert proc.stdout is not None
+    # The asserts are mypy narrowing helpers — stdin/stdout are
+    # guaranteed non-None because the parent uses `stdin=PIPE, stdout=PIPE`.
+    assert proc.stdin is not None  # nosec B101
+    assert proc.stdout is not None  # nosec B101
     proc.stdin.write((json.dumps(payload) + "\n").encode())
     await proc.stdin.drain()
     line = await asyncio.wait_for(proc.stdout.readline(), timeout=timeout)
@@ -34,7 +36,7 @@ async def _send(
 
 
 async def _notify(proc: asyncio.subprocess.Process, method: str) -> None:
-    assert proc.stdin is not None
+    assert proc.stdin is not None  # nosec B101 — stdin=PIPE guarantees it
     proc.stdin.write((json.dumps({"jsonrpc": "2.0", "method": method}) + "\n").encode())
     await proc.stdin.drain()
 
