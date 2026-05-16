@@ -9,6 +9,27 @@ land on `main` without a bump.
 
 ### Fixed
 
+- **`docs/UPSTREAM.md` Risk-register honesty pass** (iters 196–198).
+  Three of the four rows overstated the project's actual behaviour:
+  - Schema-drift row claimed "logs warning + parse_error on
+    mismatch" — but iter-126's wiring emits structlog events only;
+    the detector is observational, not gating. Rewritten to spell
+    out the two emitted event names + that `ParseError` fires
+    from `parser.py` independently when a shape change actually
+    breaks parsing.
+  - Rate-limits-per-IP row listed "pluggable egress for rotating
+    IPs" as a mitigation we have — we don't (single
+    `httpx.AsyncClient`). Reworded to name the two real controls
+    (breaker + cache) + the HTML-fallback path + the explicit gap.
+  - Bundle-URL-change row pointed at a "Sprint 4 stretch" feature
+    (runtime extraction from `runtime.*.js` + `main.*.js`) that
+    was never shipped and isn't even in the ROADMAP's Stretch
+    section — phantom feature. Rewritten to describe what
+    actually happens if the upstream reshapes a path: requests
+    404, breaker trips, HTML fallback carries until a human
+    refreshes the hardcoded constants.
+  Same audit pattern as iters 78 / 108 / 144 (ROADMAP overstating
+  shipped work).
 - **Project version is now single-sourced from `pyproject.toml`.**
   The version string `"0.0.1"` was hardcoded in three places:
   `pyproject.toml` (canonical), `src/db2st_mcp/__init__.py`
