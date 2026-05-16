@@ -77,3 +77,19 @@ uv run pytest -W error -W default::pytest.PytestUnraisableExceptionWarning
   `tests/integration/` only.
 - Each test gets fresh app state (`build_app()` fixture pattern);
   the MCP session manager is single-use per instance.
+
+## Shared test helpers
+
+Two reusable helpers live in conftest files. Use them instead of
+hand-rolling — they centralise the patterns that previously drifted
+across multiple test files.
+
+| Helper | Where | Use it for |
+|---|---|---|
+| `SpyLogger` | `tests/conftest.py` | Spy on a module's `_log`. Provides `info` / `warning` / `exception`; every call appends a `(event_name, kwargs)` tuple to `.calls`. Pair with a per-test-file `spy_log` fixture that `monkeypatch.setattr`s the target module's `_log`. Examples: `tests/unit/shared/test_circuit_breaker.py`, `tests/unit/domains/auth/server/test_middleware.py`. |
+| `terminate_cleanly` | `tests/e2e/conftest.py` | Subprocess-cleanup for e2e tests: `SIGTERM`, wait up to a budget, `SIGKILL` on miss, **assert clean exit**. The assertion is what makes a future `aclose()` deadlock fail the test loudly rather than passing under the SIGKILL fallback. All four subprocess-based e2e tests use it. |
+
+When you add a test that needs either pattern, prefer the helper.
+If the helper doesn't fit, copy-paste it into a new helper rather
+than re-inventing the shape in the test body — the dedup is what
+gives both helpers their regression-guard properties.
