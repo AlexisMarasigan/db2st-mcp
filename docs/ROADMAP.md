@@ -32,7 +32,7 @@ Phased plan. Each sprint ends with a runnable, demonstrable artifact.
 - [x] Bearer token middleware on transport
 - [x] `TokenStore` protocol + in-memory dev impl
 - [x] Redis-backed prod impl (Upstash REST)
-- [x] Per-token daily quota, sliding window
+- [x] Per-token daily quota, UTC calendar-day (hard reset at 00:00 UTC)
 - [x] 401 / 429 with structured MCP error payloads
 - [x] Mint/list/revoke CLI
 
