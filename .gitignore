@@ -44,3 +44,8 @@ dist/
 # Local-only Claude state (skills under .claude/skills/ are committed)
 .claude/homunculus/
 .claude/settings.local.json
+
+# Conventional local-only files. The `*.local.*` suffix is the agreed
+# marker for ephemeral state that should never ship in sdists / wheels
+# or get committed (e.g. .claude/ralph-loop.local.md).
+*.local.*
