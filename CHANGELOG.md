@@ -7,6 +7,36 @@ land on `main` without a bump.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Wired the schema-drift detector into the upstream client**
+  (`shared/drift.py`). Sprint 4 listed it `[x]` and the module
+  shipped with unit tests, but `grep -rn "from db2st_mcp.shared.drift"
+  src/` returned nothing — the detector was dead code from a
+  runtime standpoint. Now called from both `SchenkerClient.resolve()`
+  (`drift_check("resolver", payload)`) and `fetch_detail()`
+  (`drift_check(f"detail:{type_hint}", payload)`); the per-mode
+  key lets drift dashboards split shipment types so a schema
+  change in `land` doesn't silently obscure one in `ocean`. Pinned
+  by a respx-based integration test.
+
+### Changed
+
+- **README local-MCP Quickstart now enables the HTML fallback**
+  (`-e DB2ST_HTML_FALLBACK=1` + `--extra fallback` +
+  `playwright install chromium`). Without the fallback, new users
+  on a fresh egress IP hit "shipment not found" on every call —
+  not because anything is broken, but because the upstream JSON
+  path rate-limits fresh IPs. Doc-side fix for iter-100's
+  real-time discovery.
+- Dropped the dead `shared/logging.get_logger()` helper. Production
+  code (17 call sites) uses `structlog.get_logger(__name__)`
+  directly; the helper was only imported by its own smoke test.
+  Third in the dead-code series after iter-105 (`store.py`
+  `__all__`) and iter-106 (`tracking/shared/__init__.py`
+  re-exports). Module docstring now spells out the canonical
+  pattern so a future contributor doesn't re-add a wrapper.
+
 ### Observability
 
 - **Structured log events on every auth-failure branch**
