@@ -1,10 +1,18 @@
-"""Structured logging via structlog. One configure call at startup."""
+"""Structured logging via structlog. One configure call at startup.
+
+Modules get their own logger directly:
+
+    import structlog
+    _log = structlog.get_logger(__name__)
+
+No wrapper here -- structlog's stdlib factory is enough. Pre-binding
+keys at construction is `structlog.get_logger(__name__).bind(...)`.
+"""
 
 from __future__ import annotations
 
 import logging
 import sys
-from typing import Any
 
 import structlog
 
@@ -40,11 +48,3 @@ def configure_logging() -> None:
         logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
     )
-
-
-def get_logger(name: str | None = None, **initial: Any) -> structlog.stdlib.BoundLogger:
-    """Return a bound logger pre-populated with common keys."""
-    log: structlog.stdlib.BoundLogger = structlog.get_logger(name)
-    if initial:
-        log = log.bind(**initial)
-    return log
