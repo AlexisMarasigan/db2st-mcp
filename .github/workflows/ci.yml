@@ -34,15 +34,16 @@ jobs:
   verify-docs:
     name: Verify docs (Clara invariants)
     runs-on: ubuntu-latest
+    # `scripts/verify_docs.py` is pure stdlib (ast, re, pathlib). Skip the
+    # `uv sync` step to keep this job fast on every PR.
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3
         with:
           enable-cache: true
       - run: uv python install ${{ env.PYTHON_VERSION }}
-      - run: uv sync --frozen --group dev
       - name: verify-docs
-        run: uv run python scripts/verify_docs.py
+        run: uv run --no-project python scripts/verify_docs.py
 
   typecheck:
     name: Typecheck (mypy)
