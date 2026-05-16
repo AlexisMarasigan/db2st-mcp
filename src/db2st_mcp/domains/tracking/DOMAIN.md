@@ -117,3 +117,15 @@ the orchestrator without re-implementing the safety net.
 The Playwright fallback raises `NotFoundError` instead of returning a
 misleading "scraped" event so the JSON path and the fallback agree on the
 error taxonomy.
+
+**2026-05-16: `track_shipment_events` ships shipment-level, not per-colli.**
+The original brief's bonus asked for "individual tracking events per
+package". The current upstream payload exposes a single shipment-level
+event timeline (`Shipment.history`); per-package event arrays are not
+observable from this rate-limited dev IP. Decision: ship the lighter
+events tool now with the existing shape (real value for poll-style
+clients today) and defer the per-package split (`Shipment.packages:
+list[Package]` with per-package `events`) to a future iteration that
+can observe the real per-package JSON. Speculating a schema without
+ground truth would have been a guess that future-us would have to
+unwind.
