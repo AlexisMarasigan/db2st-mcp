@@ -32,29 +32,38 @@ Domain errors come from `db2st_mcp.shared.errors` (`NotFoundError`,
 
 ```python
 class Party(BaseModel):
-    name: str
-    address: Address
+    name: str = ""
+    address: Address = Field(default_factory=Address)
 
 class PackageInfo(BaseModel):
-    weight_kg: Decimal | None
-    dimensions_cm: tuple[int, int, int] | None
-    piece_count: int
+    weight_kg: Decimal | None = None
+    length_cm: int | None = None
+    width_cm: int | None = None
+    height_cm: int | None = None
+    piece_count: int = 1
+    volume_m3: Decimal | None = None
 
 class TrackingEvent(BaseModel):
     at: datetime
-    location: str | None
+    location: str | None = None
     status: str
-    description: str | None
+    description: str | None = None
 
 class Shipment(BaseModel):
     reference: str
-    sender: Party
-    receiver: Party
-    package: PackageInfo
-    history: list[TrackingEvent]
+    type: ShipmentType = "unknown"
+    sender: Party = Field(default_factory=Party)
+    receiver: Party = Field(default_factory=Party)
+    package: PackageInfo = Field(default_factory=PackageInfo)
+    history: list[TrackingEvent] = Field(default_factory=list)
+    source: Literal["json", "html_fallback"] = "json"
 ```
 
-The MCP tool returns `Shipment.model_dump(mode="json")`.
+All models use `ConfigDict(extra="forbid")` so unexpected upstream
+fields surface as a `ParseError` rather than silently passing through.
+The MCP framework serialises the returned `Shipment` via
+`model_dump(mode="json")`, so callers see ISO-8601 strings and
+JSON-safe Decimals.
 
 ## Internal pieces
 
