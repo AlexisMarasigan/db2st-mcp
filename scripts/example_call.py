@@ -8,6 +8,15 @@ Usage:
     uv run python scripts/example_call.py                       # default ref
     uv run python scripts/example_call.py 1806203236            # custom ref
     DB2ST_HTML_FALLBACK=1 uv run python scripts/example_call.py # enable fallback
+
+To use the HTML-fallback path, install the Playwright extra first:
+
+    uv sync --group dev --extra fallback
+    uv run playwright install chromium
+
+Without the extra, the fallback raises a clean
+`Db2stError("playwright not installed; reinstall with the [fallback] extra")`
+which surfaces as `upstream_unavailable` on the wire.
 """
 
 from __future__ import annotations
