@@ -7,7 +7,62 @@ land on `main` without a bump.
 
 ## [Unreleased]
 
+### Added
+
+- **Structured event extraction in the HTML fallback parser**
+  (`html_fallback.py`). Ported from
+  [rodram/shipmentTrackerMCP](https://github.com/rodram/shipmentTrackerMCP)'s
+  `parser.ts` after a side-by-side review of both solutions.
+  Previously the fallback emitted a single synthetic `"scraped"`
+  event whose description was the raw body text (~250 chars
+  truncated to 400). Now each event row is regex-parsed for
+  date (`YYYY[./-]MM[./-]DD` or `DD[./-]MM[./-]YYYY`), time
+  (`HH:MM`), country (`[A-Z]{2}`), location, and status keyword
+  (`booked`, `collected`, `arrived`, `departed`,
+  `out for delivery`, `delivered`, `loaded`, `not loaded`,
+  `picked up`, `in transit`). DOM selectors now match
+  `table tbody tr, [class*='event'], [class*='timeline'] > *,
+  [class*='history'] li` (rodram's selector set), with a
+  body-text line-by-line fallback. Events deduped on
+  `(at, status)` and sorted newest-first; capped at 30 to
+  guard against scraping unrelated rows. Live retest of the
+  one alive sample ref (`1806290829`) goes from 1 synthetic
+  event to **10 structured events** with parsed timestamps
+  and statuses.
+- **Sender/receiver address parsing** in the fallback. Pulls
+  postal code, city, country from the labelled body sections
+  via `_section_between` + `_extract_party` (rodram's
+  `extractBetween` + address-line regex, ported to Python).
+  Only used when DOM `senderName` / `receiverName` selectors
+  yield nothing.
+- **Package weight + pieces + volume extraction** in the
+  fallback (`_extract_package`). Recognises `kg`, `t`, `lb(s)`
+  units and converts to kg; pieces from `pieces`, `pcs`,
+  `qty`, `quantity`, `colli(s)`, `number of packages`,
+  `antal kollin`, `antal paket` labels.
+
 ### Fixed
+
+- **HTML fallback no longer returns a degenerate `Shipment` when the
+  SPA gets stuck on its landing page** (`html_fallback.py`). Caught
+  via live Chrome cross-check of all 11 sample refs against the
+  upstream UI: the one ref still alive in DSV's tracking window
+  (`1806290829`) had MCP returning empty sender/receiver/weight and a
+  single "scraped" event whose description was the SPA landing-page
+  header ("Welcome to DSV Tracking / Reference Number / …"). The
+  prior success criterion was "absence of NOT_FOUND_MARKERS" — which
+  the landing page also satisfies. When the headless Playwright
+  context's resolver XHR was rate-limited or missed its XSRF cookie,
+  the fallback scraped the unrendered landing state as if it were a
+  shipment. Fix: require at least one DETAIL_MARKER (`DWB Number`,
+  `STT-number`, `Number of packages`, `Show all events` + Swedish
+  variants) in the body. Absent → `UpstreamUnavailableError` so the
+  breaker counts the failure and the cache stays clean. New regression
+  tests (`test_fetch_raises_upstream_unavailable_when_only_landing_page_visible`,
+  `test_fetch_returns_shipment_when_detail_markers_present`) lock the
+  behaviour. The `html_fallback.empty` log event is renamed
+  `html_fallback.no_detail_markers` with a `body_preview` field for
+  ops triage. DOMAIN.md Observability table + Decision Log updated.
 
 - **`docs/UPSTREAM.md` Risk-register honesty pass** (iters 196–198).
   Three of the four rows overstated the project's actual behaviour:

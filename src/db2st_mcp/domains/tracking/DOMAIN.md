@@ -105,7 +105,7 @@ Structured log events emitted by the orchestrator and its primitives:
 | `tracking.cache_get_failed` | warning | The cache backend (typically `UpstashCache` when Upstash is unreachable) raised on read. The service degrades to a miss and falls through to the upstream path — the request still succeeds. Includes `reference` and `cause` (the exception class name). |
 | `tracking.cache_set_failed` | warning | Same idea for writes: an Upstash outage on `set()` after a successful upstream fetch would otherwise lose the result. Swallowed so the request returns the shipment. Includes `reference` and `cause`. |
 | `tracking.fallback_engaged` | warning | Primary upstream failed (breaker open or error); HTML fallback was invoked. Includes `reason`. |
-| `html_fallback.empty` | warning | The Playwright fallback scraped but returned no content. The tool maps this to `NotFoundError`; the log line surfaces it for ops. Includes `reference`. |
+| `html_fallback.no_detail_markers` | warning | The Playwright fallback rendered a page with no shipment-detail signature (`DWB Number`, `STT-number`, etc) and no not-found marker — typically the SPA landing page, seen when the headless context's resolver XHR is rate-limited or arrives without an XSRF cookie. The tool maps this to `UpstreamUnavailableError` (breaker counts the failure; cache is not poisoned with a degenerate empty `Shipment`). Includes `reference` and `body_preview`. |
 | `html_fallback.playwright_error` | warning | Playwright itself errored (e.g., `Page.goto: Timeout 30000ms exceeded`, navigation crash). The tool maps it to `UpstreamUnavailableError` so the wire response stays in the project taxonomy and the breaker counts it as an upstream failure. Includes `reference` and `exc` (the Playwright exception class name). |
 | `circuit_breaker.opened` | warning | Failure threshold hit. Includes `failures`, `threshold`, `cooldown_seconds`. The upstream is now short-circuited until cooldown. |
 | `circuit_breaker.closed` | info | Open → closed recovery: a successful request after the breaker had tripped. |
@@ -156,6 +156,34 @@ the orchestrator without re-implementing the safety net.
 The Playwright fallback raises `NotFoundError` instead of returning a
 misleading "scraped" event so the JSON path and the fallback agree on the
 error taxonomy.
+
+**2026-05-16: HTML fallback requires positive shipment-detail markers
+before declaring success.** Caught via live Chrome SPA cross-check of all
+11 sample refs: ref `1806290829` returned a degenerate `Shipment` (empty
+fields, one synthetic "scraped" event whose description was the SPA
+landing-page header) because the headless Playwright context's resolver
+XHR was rate-limited by DSV. The fallback's prior success criterion was
+"absence of NOT_FOUND_MARKERS", which the landing page also satisfies.
+Fix: require at least one DETAIL_MARKER (`DWB Number`, `STT-number`,
+`Number of packages`, `Show all events` + Swedish variants) in the
+scraped body. Else raise `UpstreamUnavailableError` so the breaker
+counts it and the cache isn't poisoned.
+
+**2026-05-16: HTML fallback ports event/address/package parsing from
+rodram/shipmentTrackerMCP.** A side-by-side review of the rodram
+TypeScript implementation surfaced one improvement area: their
+`parser.ts` extracts structured event fields (date, time, country,
+location, status keyword) from event rows via regex. Ours used to
+emit a single synthetic "scraped" event with the raw body text.
+Ported to Python (`_parse_event_text` + `_section_between` +
+`_extract_party` + `_extract_package`), which keeps parsing testable
+and avoids running browser-context JS. Now the fallback emits real
+`TrackingEvent` records the JSON path can be compared against.
+Status keyword list, date/time/country regex, and DOM selector
+shape all match rodram's. Dedupe + sort + 30-event cap retained
+from rodram. Sender/receiver postal/city/country parsed from
+labelled body sections when DOM `data-testid` selectors miss.
+Weight (kg/t/lb), pieces, and volume regex-extracted from body.
 
 **2026-05-16: `track_shipment_events` ships shipment-level, not per-colli.**
 The original brief's bonus asked for "individual tracking events per
