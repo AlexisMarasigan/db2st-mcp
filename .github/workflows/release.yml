@@ -64,6 +64,10 @@ jobs:
       - name: Build sdist + wheel
         run: uv build
 
+      - name: Validate wheel + sdist metadata (twine check)
+        # `--strict` treats any warning as a failure — release-critical.
+        run: uvx twine check --strict dist/*
+
       - name: Generate checksums
         run: |
           cd dist
