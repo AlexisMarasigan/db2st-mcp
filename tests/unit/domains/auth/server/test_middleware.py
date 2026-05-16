@@ -18,6 +18,7 @@ from db2st_mcp.domains.auth.server.middleware import (
 )
 from db2st_mcp.domains.auth.server.store import InMemoryTokenStore
 from db2st_mcp.shared.errors import QuotaExceededError, UnauthorizedError
+from tests.conftest import SpyLogger
 
 
 def _app(store: InMemoryTokenStore) -> Starlette:
@@ -33,25 +34,15 @@ def _app(store: InMemoryTokenStore) -> Starlette:
     return app
 
 
-class _SpyLogger:
-    """Captures structlog `info` calls for assertions."""
-
-    def __init__(self) -> None:
-        self.calls: list[tuple[str, dict[str, object]]] = []
-
-    def info(self, event: str, **kw: object) -> None:
-        self.calls.append((event, kw))
-
-
 @pytest.fixture
-def spy_log(monkeypatch: pytest.MonkeyPatch) -> _SpyLogger:
+def spy_log(monkeypatch: pytest.MonkeyPatch) -> SpyLogger:
     """Replace the middleware module's bound logger with a spy.
     Patches the module's `_log` directly because structlog caches
     its processor chain at first use, which makes `caplog`-based
     assertions order-dependent across the suite."""
     from db2st_mcp.domains.auth.server import middleware as mw
 
-    spy = _SpyLogger()
+    spy = SpyLogger()
     monkeypatch.setattr(mw, "_log", spy)
     return spy
 
@@ -104,7 +95,7 @@ def test_auth_failure_message_is_identical_for_missing_and_invalid() -> None:
     assert missing["message"] == wrong["message"] == revoked_marker["message"]
 
 
-def test_auth_failure_logs_distinguish_cause(spy_log: _SpyLogger) -> None:
+def test_auth_failure_logs_distinguish_cause(spy_log: SpyLogger) -> None:
     """Wire response stays generic, but the internal log line MUST
     carry a distinct `reason` so ops dashboards can split 401s by
     cause. Pairs with the message-identicality test above: outside
@@ -125,7 +116,7 @@ def test_auth_failure_logs_distinguish_cause(spy_log: _SpyLogger) -> None:
 
 @pytest.mark.asyncio
 async def test_quota_exhaustion_emits_log_with_token_id(
-    spy_log: _SpyLogger,
+    spy_log: SpyLogger,
 ) -> None:
     """Same observability pattern as `auth.failure` but for 429s.
     Ops dashboards split 429-by-token to spot abusive callers; the
