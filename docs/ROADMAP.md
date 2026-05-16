@@ -91,3 +91,12 @@ detector. The kind-cluster step from sprint 3 is documented but not
 exercised in this iteration (no local k8s available); the `func.yaml`,
 `Dockerfile`, and load-test script (`scripts/loadtest.k6.js`) cover the
 deployment surface.
+
+**2026-05-16: Stretch tool was briefly mis-marked as done, then actually shipped.**
+The `track_shipment_events` stretch box was bulk-checked during the
+initial roadmap walk-through without an implementation behind it.
+Iter 55 caught the lie and unchecked it; iter 56 actually shipped the
+shipment-level form (the events timeline only, no sender/receiver/
+package envelope). The per-package split remains a real Stretch item
+— deferred until a clean egress IP can observe the upstream's
+per-package JSON shape.
