@@ -31,14 +31,21 @@ def in_memory_store() -> InMemoryTokenStore:
 
 
 class SpyLogger:
-    """Captures structlog `info` / `warning` calls for assertions.
+    """Captures structlog `info` / `warning` / `exception` calls.
 
     Used by tests that verify the observability surface emits the
     expected events. Each production module that wants to be spied
     on has a `spy_log` fixture in its own test file that
     monkeypatches that module's `_log` with an instance of this
-    class — see `tests/unit/shared/test_circuit_breaker.py` and
-    `tests/unit/domains/auth/server/test_middleware.py`.
+    class — see `tests/unit/shared/test_circuit_breaker.py`,
+    `tests/unit/domains/auth/server/test_middleware.py`, and
+    `tests/unit/apps/server/test_request_id_middleware.py`.
+
+    All three log levels append to the same `calls` list as
+    `(event_name, kwargs)` tuples. Tests check the event name (and
+    any structured kwargs) but treat the level as an implementation
+    detail of the production code — structlog routes every level
+    through the same stderr pipeline.
     """
 
     def __init__(self) -> None:
@@ -48,4 +55,7 @@ class SpyLogger:
         self.calls.append((event, kw))
 
     def warning(self, event: str, **kw: object) -> None:
+        self.calls.append((event, kw))
+
+    def exception(self, event: str, **kw: object) -> None:
         self.calls.append((event, kw))
