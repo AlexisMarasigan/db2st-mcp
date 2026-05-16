@@ -97,9 +97,16 @@ async def test_serve_boots_and_rejects_unauthenticated_mcp_call() -> None:
         assert "bearer" in body["message"].lower()
     finally:
         proc.send_signal(signal.SIGTERM)
+        clean_exit = False
         try:
             await asyncio.wait_for(proc.wait(), timeout=5)
+            clean_exit = True
         except TimeoutError:
             proc.kill()
             with contextlib.suppress(Exception):
                 await proc.wait()
+        # The lifespan `finally` walks `AppDeps.aclose()` -> three
+        # `aclose()` calls (iter 130/131). If any of them deadlock
+        # the process won't exit within the 5s budget and we'll
+        # fall through to SIGKILL; that's the regression signal.
+        assert clean_exit, "process did not honor SIGTERM within 5s"
