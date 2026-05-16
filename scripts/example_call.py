@@ -36,7 +36,9 @@ async def _send(
 
 
 async def _notify(proc: asyncio.subprocess.Process, method: str) -> None:
-    assert proc.stdin is not None  # nosec B101 — stdin=PIPE guarantees it
+    # B101: assert as mypy narrowing helper; stdin=PIPE in the caller
+    # guarantees stdin is non-None.
+    assert proc.stdin is not None  # nosec B101
     proc.stdin.write((json.dumps({"jsonrpc": "2.0", "method": method}) + "\n").encode())
     await proc.stdin.drain()
 
