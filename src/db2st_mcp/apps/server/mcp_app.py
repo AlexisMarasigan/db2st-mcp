@@ -15,6 +15,7 @@ from typing import Any
 import structlog
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
+from pydantic import ValidationError
 
 from db2st_mcp.domains.tracking.server.service import TrackingService
 from db2st_mcp.domains.tracking.server.tool import (
@@ -25,8 +26,26 @@ from db2st_mcp.domains.tracking.server.tool import (
 )
 from db2st_mcp.domains.tracking.shared.schemas import Shipment
 from db2st_mcp.shared.config import get_settings
+from db2st_mcp.shared.errors import InvalidInputError
 
 _log = structlog.get_logger(__name__)
+
+
+def _validation_error_to_domain(e: ValidationError) -> InvalidInputError:
+    """Translate a Pydantic ValidationError into our domain error type.
+
+    Without this wrap, the raw Pydantic message leaks the internal
+    args-schema class name, the Pydantic version, and an errors.pydantic.dev
+    URL into the MCP wire response. The translated message keeps just the
+    actionable summary (field name + the human-readable constraint failure).
+    """
+    issues = e.errors()
+    if not issues:
+        return InvalidInputError("invalid input")
+    first = issues[0]
+    loc = ".".join(str(p) for p in first.get("loc", ()))
+    msg = str(first.get("msg", "invalid value"))
+    return InvalidInputError(f"{loc}: {msg}" if loc else msg)
 
 
 def _transport_security() -> TransportSecuritySettings | None:
@@ -63,7 +82,10 @@ def build_mcp_server(tracking_service: TrackingService) -> FastMCP:
         ),
     )
     async def _track_shipment(reference: str) -> dict[str, Any]:
-        args = TrackShipmentArgs(reference=reference)
+        try:
+            args = TrackShipmentArgs(reference=reference)
+        except ValidationError as e:
+            raise _validation_error_to_domain(e) from e
         shipment: Shipment = await track_shipment(args, service=tracking_service)
         return shipment.model_dump(mode="json")
 
@@ -76,7 +98,10 @@ def build_mcp_server(tracking_service: TrackingService) -> FastMCP:
         ),
     )
     async def _track_shipment_events(reference: str) -> list[dict[str, Any]]:
-        args = TrackShipmentEventsArgs(reference=reference)
+        try:
+            args = TrackShipmentEventsArgs(reference=reference)
+        except ValidationError as e:
+            raise _validation_error_to_domain(e) from e
         events = await track_shipment_events(args, service=tracking_service)
         return [e.model_dump(mode="json") for e in events]
 
