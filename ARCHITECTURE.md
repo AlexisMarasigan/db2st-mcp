@@ -48,7 +48,7 @@ No domain imports another. No circular deps.
 
 ## Scaling model
 
-Stateless pods behind Knative autoscaler. State lives in Redis (token store + quota counters). Concurrency-target autoscaling (default 50/pod). See [docs/KNATIVE.md](docs/KNATIVE.md).
+Stateless pods behind Knative autoscaler. Shared state (token store + quota counters + optional response cache) lives in Upstash Redis. Concurrency-target autoscaling (default 50/pod). See [docs/KNATIVE.md](docs/KNATIVE.md).
 
 ## Tooling
 

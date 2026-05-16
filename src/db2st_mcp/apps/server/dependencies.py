@@ -20,6 +20,7 @@ from db2st_mcp.domains.tracking.shared.schemas import Shipment
 from db2st_mcp.shared.cache import TTLCache
 from db2st_mcp.shared.circuit_breaker import CircuitBreaker
 from db2st_mcp.shared.config import Settings
+from db2st_mcp.shared.upstash_cache import CacheCodec
 
 _log = structlog.get_logger(__name__)
 
@@ -49,7 +50,7 @@ def build_deps(settings: Settings) -> AppDeps:
 
     schenker_client = SchenkerClient()
 
-    cache: _Cache | None = TTLCache[Shipment](maxsize=512, ttl_seconds=60.0)
+    cache: _Cache | None = _build_cache(settings)
     breaker: _CircuitBreaker | None = CircuitBreaker(failure_threshold=5, cooldown_seconds=30.0)
     fallback: _HtmlFallback | None = None
     if os.getenv("DB2ST_HTML_FALLBACK", "").lower() in {"1", "true", "yes"}:
@@ -75,3 +76,28 @@ def build_deps(settings: Settings) -> AppDeps:
         schenker_client=schenker_client,
         tracking_service=tracking_service,
     )
+
+
+# B105 (hardcoded-password-string): "upstash" is a backend enum literal,
+# not a credential.
+def _build_cache(settings: Settings) -> _Cache:
+    """Pick the response-cache backend. `memory` is per-pod (lost on
+    restart); `upstash` is shared across pods and survives churn."""
+    ttl = float(settings.response_cache_ttl_seconds)
+    if settings.response_cache_backend == "upstash":  # nosec B105
+        from db2st_mcp.shared.upstash_cache import UpstashCache
+
+        codec: CacheCodec[Shipment] = CacheCodec(
+            encode=lambda s: s.model_dump_json(),
+            decode=Shipment.model_validate_json,
+        )
+        _log.info(
+            "deps.response_cache.upstash",
+            ttl_seconds=settings.response_cache_ttl_seconds,
+        )
+        return UpstashCache.from_settings(
+            settings,
+            codec=codec,
+            key_prefix="db2st:shipment",
+        )
+    return TTLCache[Shipment](maxsize=512, ttl_seconds=ttl)

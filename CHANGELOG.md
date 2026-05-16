@@ -7,6 +7,21 @@ land on `main` without a bump.
 
 ## [Unreleased]
 
+### Added
+
+- **KV-backed response cache** (`shared/upstash_cache.py`). Generic on
+  the cached value type, injectable encode/decode codec, server-side
+  TTL via `SET ... EX <seconds>` so entries survive pod churn up to
+  the TTL. Opt in with `RESPONSE_CACHE_BACKEND=upstash`; reuses the
+  `UPSTASH_REDIS_REST_URL/_TOKEN` pair already used by the token
+  store, but is enabled independently. The default
+  (`RESPONSE_CACHE_BACKEND=memory`) keeps the previous in-process
+  `TTLCache` behaviour. `RESPONSE_CACHE_TTL_SECONDS` is now a knob
+  (defaults to 60). Promotes the "KV-backed cache" item from Stretch
+  into a real Sprint 4 deliverable. Pinned by 10 cache-level unit
+  tests + a `build_deps` branch test. Architecture / KNATIVE / AUTH
+  / .env.example refreshed.
+
 ### Changed
 
 - Dependabot now also watches the `Dockerfile` base image, in addition

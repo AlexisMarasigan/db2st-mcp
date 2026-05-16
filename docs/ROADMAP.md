@@ -60,9 +60,15 @@ validation are deferred until a cluster host is available**.
 ## Sprint 4 — Hardening
 
 - [x] Circuit breaker around Schenker upstream
-- [x] Response cache (60s TTL keyed on ref) — **in-memory `TTLCache`
-      (`shared/cache.py`)**, not KV-backed. KV-backed cache that
-      survives pod churn is deferred to the Stretch section.
+- [x] Response cache (60s TTL keyed on ref). Two backends, picked by
+      `RESPONSE_CACHE_BACKEND`:
+      - `memory` (default): in-process `TTLCache` (`shared/cache.py`),
+        per-pod, lost on restart.
+      - `upstash`: `UpstashCache` (`shared/upstash_cache.py`), shared
+        across pods, server-side TTL via `SET ... EX <seconds>`, so a
+        cache entry survives pod churn up to the TTL. Uses the same
+        Upstash credentials as `token_store=upstash` but is opt-in
+        independently.
 - [x] Schema-drift detector for upstream payload (`shared/drift.py`).
 - [ ] Public demo endpoint with free-tier token. Deferred — needs a
       hosting environment to deploy into. Tracked in Stretch.
@@ -70,9 +76,9 @@ validation are deferred until a cluster host is available**.
       shipment-level events timeline. The per-package refinement is
       still in Stretch (needs upstream observation).
 
-**Exit:** circuit breaker + in-memory cache + drift detector + events
-tool live. Public demo endpoint deferred until a hosting target is
-chosen.
+**Exit:** circuit breaker + cache (memory + KV-backed) + drift
+detector + events tool live. Public demo endpoint deferred until a
+hosting target is chosen.
 
 ## Stretch
 
@@ -117,3 +123,13 @@ shipment-level form (the events timeline only, no sender/receiver/
 package envelope). The per-package split remains a real Stretch item
 — deferred until a clean egress IP can observe the upstream's
 per-package JSON shape.
+
+**2026-05-16: KV-backed response cache promoted from Stretch into Sprint 4.**
+Iter 78's honesty audit flagged the original `[x]` on "Response cache
+(KV-backed)" because the implementation was in-memory `TTLCache` only.
+Iter 80 added `shared/upstash_cache.py` — a generic Upstash-Redis-
+backed cache with injectable codec — and wired
+`RESPONSE_CACHE_BACKEND=upstash` through `build_deps`. Both backends
+satisfy the existing `_Cache` Protocol used by `TrackingService`, so
+no domain code changed. Pinned by 10 new unit tests on the cache
+itself plus a `build_deps` branch test.

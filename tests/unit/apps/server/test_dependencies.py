@@ -60,6 +60,40 @@ def test_html_fallback_wired_when_env_set(monkeypatch: pytest.MonkeyPatch) -> No
     assert deps.tracking_service._fallback is not None
 
 
+def test_response_cache_defaults_to_memory_ttlcache() -> None:
+    """Default `response_cache_backend=memory` wires an in-process
+    `TTLCache[Shipment]`."""
+    from db2st_mcp.shared.cache import TTLCache
+
+    deps = build_deps(Settings())
+    assert isinstance(deps.tracking_service._cache, TTLCache)
+
+
+def test_response_cache_upstash_branch(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`response_cache_backend=upstash` wires `UpstashCache` end-to-end
+    through `build_deps`."""
+
+    class _FakeRedis:
+        def __init__(self, *args: object, **kwargs: object) -> None: ...
+
+    fake_module = types.ModuleType("upstash_redis")
+    asyncio_module = types.ModuleType("upstash_redis.asyncio")
+    asyncio_module.Redis = _FakeRedis  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "upstash_redis", fake_module)
+    monkeypatch.setitem(sys.modules, "upstash_redis.asyncio", asyncio_module)
+
+    settings = Settings(
+        response_cache_backend="upstash",
+        upstash_redis_rest_url="https://example.invalid",  # type: ignore[arg-type]
+        upstash_redis_rest_token="x",
+    )
+    deps = build_deps(settings)
+
+    from db2st_mcp.shared.upstash_cache import UpstashCache
+
+    assert isinstance(deps.tracking_service._cache, UpstashCache)
+
+
 def test_html_fallback_unavailable_falls_back_to_no_fallback(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
