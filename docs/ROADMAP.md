@@ -102,6 +102,10 @@ hosting target is chosen.
 - Second carrier domain (PostNord) to prove the package-per-domain model.
 - mTLS / OAuth client credentials beside bearer tokens.
 - Multi-region Knative deployment with latency-based routing.
+- Per-IP rate limit on auth failures (defense-in-depth). The
+  current threat model relies entirely on secret entropy (2^256
+  keyspace) to resist brute force — adequate but worth an IP-level
+  guard so attackers can't even mount a guessing campaign.
 
 ## Decision Log
 
