@@ -9,6 +9,26 @@ land on `main` without a bump.
 
 ### Fixed
 
+- **Playwright errors now map to `UpstreamUnavailableError`** instead
+  of bubbling raw to the MCP wire response. Caught live this iter
+  by trying a previously-unused sample ref: the SPA was slow, `Page.goto`
+  hit its 30s timeout, and `Page.goto: Timeout 30000ms exceeded` came
+  back as the tool error. Three downstream problems followed: the wire
+  error left the `Db2stError` taxonomy, the breaker couldn't catch it
+  (only `(UpstreamUnavailableError, ParseError)` are caught in the
+  service), and the raw exception message embedded the reference
+  number in a URL. Fix: catch `playwright.async_api.Error` (base
+  class) in `PlaywrightHtmlFallback.fetch`; map to a generic
+  `UpstreamUnavailableError` with `details.cause = type(e).__name__`
+  for ops correlation; emit `html_fallback.playwright_error` warning
+  for dashboards. Pinned by a new test with an exception-injecting
+  Playwright stub.
+- ROADMAP Sprint 1 Exit overstated coverage ("structured data for
+  *every* sample ref") and missed the Sprint-4 second tool. Reworded
+  to drop "every" (some refs 404/429 from any rate-limited dev IP,
+  documented in `docs/UPSTREAM.md`) and credit
+  `track_shipment_events` to Sprint 4 stretch where it actually
+  landed.
 - **Upstash httpx pools now released on graceful shutdown.**
   `AppDeps.aclose()` (called from the FastAPI lifespan's `finally`)
   was only closing the `SchenkerClient`. Both `UpstashTokenStore`
