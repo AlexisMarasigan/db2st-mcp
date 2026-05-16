@@ -50,13 +50,19 @@ None.
 
 ## Failure modes
 
-| Cause | Response |
-|---|---|
-| Missing `Authorization` | 401 `unauthorized` |
-| Malformed header | 401 `unauthorized` |
-| Hash not in store | 401 `unauthorized` |
-| Token revoked | 401 `unauthorized` |
-| Quota exhausted | 429 `quota_exceeded` (with retry-after) |
+| Cause | Response | Log event |
+|---|---|---|
+| Missing `Authorization` | 401 `unauthorized` | `auth.failure reason=header_missing_or_malformed` |
+| Malformed header | 401 `unauthorized` | `auth.failure reason=header_missing_or_malformed` |
+| Hash not in store | 401 `unauthorized` | `auth.failure reason=token_unknown` |
+| Token revoked | 401 `unauthorized` | `auth.failure reason=token_revoked` |
+| Quota exhausted | 429 `quota_exceeded` (with retry-after) | `auth.quota_exhausted` |
+
+The 401 response body is intentionally identical across all four
+branches (single generic message) so the wire surface doesn't leak
+which branch fired. The internal log line carries the distinction;
+see [docs/AUTH.md](../../../../docs/AUTH.md#observability) for
+the full event-field inventory.
 
 ## Tests
 
