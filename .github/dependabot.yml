@@ -15,3 +15,13 @@ updates:
     commit-message:
       prefix: "chore"
       include: "scope"
+  # Watch `deploy/Dockerfile`'s base image (currently python:3.12-slim).
+  # Auto-PR when a new patch release lands — security updates flow in
+  # without manual digest bumps.
+  - package-ecosystem: "docker"
+    directory: "/deploy"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
