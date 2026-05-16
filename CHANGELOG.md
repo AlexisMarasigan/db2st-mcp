@@ -62,6 +62,19 @@ land on `main` without a bump.
   appears. Real papercut observed across this iteration's session;
   not a server bug (the server registers both tools and
   `scripts/example_call.py` proves it).
+- `.env.example` extended with `DB2ST_HTML_FALLBACK` and
+  `DB2ST_AUTH_DISABLED` under a new "Runtime feature flags"
+  section. Both were referenced from the README, CONTRIBUTING, and
+  `func.yaml` but absent from the canonical env reference that
+  operators copy and adjust. Comments spell out prerequisites
+  (`[fallback]` extra + chromium driver) and the dev-only warning
+  for auth-disabled.
+- `scripts/example_call.py` docstring now spells out the
+  `[fallback]` extra prerequisite — matching the README quickstart
+  (iter-125) and CONTRIBUTING optional-extras table (iter-100).
+  Notes that running without the extra still produces a clean
+  `upstream_unavailable` wire response thanks to the iter-127 +
+  iter-145 error-mapping guarantees.
 - **README local-MCP Quickstart now enables the HTML fallback**
   (`-e DB2ST_HTML_FALLBACK=1` + `--extra fallback` +
   `playwright install chromium`). Without the fallback, new users
