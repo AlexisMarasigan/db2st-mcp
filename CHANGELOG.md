@@ -9,6 +9,17 @@ land on `main` without a bump.
 
 ### Added
 
+- `twine check --strict` runs on wheel + sdist in both the `build`
+  CI job and the release `build-and-release` job. Catches malformed
+  long_description, classifiers, or Project-URLs before any release
+  uploads.
+- `[project.urls]` extended to the PyPI-conventional set (Homepage,
+  Documentation, Source, Changelog, Issues, Bug reports, Security).
+- `[project.classifiers]` bumped to "4 - Beta" + Framework FastAPI,
+  Intended Audience, Topic tags.
+- Bandit scan extended to `scripts/` (verify_docs.py, sync_domain.py,
+  example_call.py). All findings annotated with `# nosec BXXX` +
+  rationale per project policy.
 - `docs/TESTING.md` — unit/integration/e2e layout, coverage gate,
   `pytest -W error` caveat, CI workflow inventory, test-isolation
   rules. README links to it.
@@ -133,6 +144,21 @@ land on `main` without a bump.
 
 ### Fixed
 
+- Sdist was packaging `.claude/ralph-loop.local.md` — local-only
+  ephemeral state. Hatchling's default sdist includes any file not
+  explicitly gitignored; the file's pattern wasn't covered. Added
+  the conventional `*.local.*` rule to `.gitignore` so any future
+  `<thing>.local.<ext>` is automatically excluded.
+- CI `pip-audit` was silently scanning nothing because `uv export`'s
+  `-e .` editable entry confused the action. Now filters editable +
+  comment lines before passing requirements to pip-audit.
+- CI docker smoke leaked containers on failure and couldn't survive
+  re-runs (no `--rm`, no cleanup trap). Now uses `docker run --rm`
+  with a `trap ... EXIT` that logs and stops on every exit path.
+- CI e2e report + PR comment used the default `if: success()`, so
+  the report wasn't uploaded on failure. Now `if: always()`.
+- CI `verify-docs` job no longer runs `uv sync --frozen --group
+  dev` for a pure-stdlib script. Saves ~30s on every PR.
 - `parse_resolver` crashed with `AttributeError` on non-object / non-list
   payloads (None, scalar, string). Now raises `ParseError` consistent
   with the parser's contract; pinned by a parametrised test across
