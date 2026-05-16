@@ -62,6 +62,183 @@ involving Claude Code? Run the example client:
 uv run python scripts/example_call.py 1806203236
 ```
 
+## Use with other MCP clients
+
+`db2st-mcp` is a vanilla stdio Model Context Protocol server, so any
+MCP-compatible client can run it. The package is on PyPI, which means
+the launch command across every client is the same:
+
+```bash
+uvx --from "db2st-mcp[fallback]" db2st-mcp stdio
+```
+
+This uses [`uv`](https://docs.astral.sh/uv/) to download the package
+on first run, install the optional `[fallback]` extra (Playwright,
+needed when the upstream JSON API is rate-limited), and start the
+stdio transport. The first run will also need a one-time
+`uvx playwright install chromium` to download the browser driver.
+
+If you don't want `uv`, swap `uvx --from "db2st-mcp[fallback]"` for
+`pipx run --spec "db2st-mcp[fallback]"` or any other tool runner.
+
+The two environment variables the server respects are:
+
+| Var | Effect |
+|---|---|
+| `TOKEN_STORE=memory` | Skip the bearer-token check (suitable for local stdio; HTTP deployments should use the default `upstash` store + minted tokens). |
+| `DB2ST_HTML_FALLBACK=1` | Engage the Playwright SPA fallback when the upstream JSON API 429s. Strongly recommended for local use. |
+
+### Claude Desktop
+
+Edit the config file (create it if missing):
+
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+- Linux: `~/.config/Claude/claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "db2st-mcp": {
+      "command": "uvx",
+      "args": ["--from", "db2st-mcp[fallback]", "db2st-mcp", "stdio"],
+      "env": {
+        "TOKEN_STORE": "memory",
+        "DB2ST_HTML_FALLBACK": "1"
+      }
+    }
+  }
+}
+```
+
+Restart Claude Desktop to pick up the change.
+
+### Cursor
+
+Per-project: `.cursor/mcp.json` in the repo root.
+Global: `~/.cursor/mcp.json`.
+
+Same JSON shape as Claude Desktop (the `mcpServers` object above).
+
+### VS Code (GitHub Copilot Agent)
+
+VS Code uses a different schema — `servers` (not `mcpServers`) and a
+mandatory `type` field. Create `.vscode/mcp.json`:
+
+```json
+{
+  "servers": {
+    "db2st-mcp": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["--from", "db2st-mcp[fallback]", "db2st-mcp", "stdio"],
+      "env": {
+        "TOKEN_STORE": "memory",
+        "DB2ST_HTML_FALLBACK": "1"
+      }
+    }
+  }
+}
+```
+
+### Continue (VS Code / JetBrains)
+
+Create `.continue/mcpServers/db2st-mcp.yaml` in the workspace:
+
+```yaml
+mcpServers:
+  - name: db2st-mcp
+    type: stdio
+    command: uvx
+    args:
+      - "--from"
+      - "db2st-mcp[fallback]"
+      - "db2st-mcp"
+      - "stdio"
+    env:
+      TOKEN_STORE: memory
+      DB2ST_HTML_FALLBACK: "1"
+```
+
+MCP tools are exposed in Agent mode only.
+
+### Cline (VS Code extension)
+
+Open the Cline panel → MCP Servers icon → **Configure MCP Servers**.
+That opens `cline_mcp_settings.json` (under VS Code's global extension
+storage). Add the same `mcpServers` block as Claude Desktop, plus
+Cline-specific keys if you want auto-approval:
+
+```json
+{
+  "mcpServers": {
+    "db2st-mcp": {
+      "command": "uvx",
+      "args": ["--from", "db2st-mcp[fallback]", "db2st-mcp", "stdio"],
+      "env": { "TOKEN_STORE": "memory", "DB2ST_HTML_FALLBACK": "1" },
+      "disabled": false,
+      "alwaysAllow": []
+    }
+  }
+}
+```
+
+### Zed
+
+Zed keys MCP servers under `context_servers` (not `mcpServers`).
+Edit `~/.config/zed/settings.json`:
+
+```json
+{
+  "context_servers": {
+    "db2st-mcp": {
+      "command": {
+        "path": "uvx",
+        "args": ["--from", "db2st-mcp[fallback]", "db2st-mcp", "stdio"]
+      },
+      "env": {
+        "TOKEN_STORE": "memory",
+        "DB2ST_HTML_FALLBACK": "1"
+      }
+    }
+  }
+}
+```
+
+### Windsurf
+
+Edit `~/.codeium/windsurf/mcp_config.json` (Windows:
+`%USERPROFILE%\.codeium\windsurf\mcp_config.json`). Same JSON shape
+as Claude Desktop.
+
+### Remote / HTTP-only clients
+
+If your client doesn't speak stdio, point it at the deployed HTTP
+transport instead (see the next section for how to start one + mint
+a token). Most clients accept the same `url` + `headers` shape:
+
+```json
+{
+  "mcpServers": {
+    "db2st-mcp": {
+      "url": "https://your-host/mcp/",
+      "headers": { "Authorization": "Bearer <token>" }
+    }
+  }
+}
+```
+
+### Programmatic / custom clients
+
+Any MCP SDK can drive `db2st-mcp` directly — there's nothing
+Claude-specific about the wire protocol. The `tools/list` →
+`tools/call` flow is plain JSON-RPC 2.0, and
+[`scripts/example_call.py`](scripts/example_call.py) is a 50-line
+reference implementation of a stdio client doing the handshake +
+calling `track_shipment`. Adapt that pattern for any agent framework
+(LangChain MCP adapter, LlamaIndex tools, your own runner) — the
+SDK choice is the consumer's; the server side stays unchanged.
+
 ## Use as a deployed MCP (HTTP + auth)
 
 ```bash
