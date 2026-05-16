@@ -1,6 +1,11 @@
-"""Bearer-token auth middleware (sprint 2 wires it into the app).
+"""Bearer-token auth middleware.
 
-Sprint 0 ships the function so it can be unit-tested ahead of integration.
+Validates `Authorization: Bearer <secret>`, consumes one quota unit on
+success, and stamps `request.state.auth` with an `AuthContext` for
+downstream code. `/healthz`, `/docs`, and `/openapi.json` bypass.
+
+Wired into the FastAPI app by `db2st_mcp.apps.server.main.build_app`.
+Disable for development with `DB2ST_AUTH_DISABLED=1`.
 """
 
 from __future__ import annotations
@@ -28,8 +33,9 @@ async def authenticate(
 ) -> AuthContext:
     """Validate the request's bearer token and decrement quota.
 
-    Quota is decremented up-front by `consume`. Callers that fail downstream
-    can decide whether to refund (sprint 2 enhancement).
+    Quota is decremented up-front by `consume`. Failed downstream calls
+    therefore burn a quota unit; this is documented in `docs/AUTH.md` as
+    an accepted trade-off (refund-on-failure is a future enhancement).
     """
     secret = _extract_bearer(request)
     record = await store.lookup(secret)
