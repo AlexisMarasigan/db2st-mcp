@@ -5,7 +5,7 @@
 ## Capability
 
 - Validate `Authorization: Bearer <secret>` headers.
-- Enforce per-token daily quotas (sliding day window, UTC).
+- Enforce per-token daily quotas (UTC calendar day; counter resets at 00:00 UTC).
 - Mint / list / revoke tokens.
 
 ## Public surface
@@ -35,7 +35,10 @@ class TokenStore(Protocol):
 
 ## Quota semantics
 
-- Window: rolling UTC day (`YYYY-MM-DD`).
+- Window: UTC calendar day. Counter hard-resets at 00:00 UTC
+  (it's *not* a rolling 24h window — at 23:59 you can still spend
+  the rest of the day's budget, but at 00:00 a fresh `daily_limit`
+  is available).
 - Key in Redis: `quota:{token_id}:{YYYY-MM-DD}` (TTL 36h).
 - Atomic `INCR` happens **pre-handler**; failed upstream calls
   therefore burn one quota unit. See [docs/AUTH.md](../../../../docs/AUTH.md)
