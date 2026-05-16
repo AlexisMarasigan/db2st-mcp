@@ -8,11 +8,15 @@ license = { text = "MIT" }
 authors = [{ name = "Alexis", email = "alexismarasigan31@gmail.com" }]
 keywords = ["mcp", "model-context-protocol", "knative", "shipment-tracking", "schenker"]
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 4 - Beta",
+  "Framework :: FastAPI",
+  "Intended Audience :: Developers",
   "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
-  "Operating System :: OS Independent",
+  "Topic :: Communications",
+  "Topic :: Software Development :: Libraries :: Python Modules",
   "Typing :: Typed",
 ]
 
