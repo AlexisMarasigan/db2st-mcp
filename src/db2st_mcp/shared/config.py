@@ -22,6 +22,12 @@ class Settings(BaseSettings):
     port: int = 8080
     log_level: Literal["debug", "info", "warning", "error"] = "info"
 
+    # MCP transport — allowed Host header values. The SDK defaults to
+    # `127.0.0.1:*`, `localhost:*`, `[::1]:*` for DNS-rebinding protection;
+    # production deployers behind their own hostname need to extend this.
+    # Comma-separated string, e.g. "mcp.example.com,mcp.staging.example.com".
+    mcp_allowed_hosts: str = ""
+
     # Auth / quotas
     token_store: Literal["memory", "upstash"] = "memory"
     upstash_redis_rest_url: HttpUrl | None = None
