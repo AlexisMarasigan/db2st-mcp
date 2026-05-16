@@ -56,6 +56,24 @@ FastAPI app
 8. `instrument_app(app)` opts the app into OpenTelemetry tracing
    when `OTEL_EXPORTER_OTLP_ENDPOINT` is set; no-op otherwise.
 
+## Shutdown
+
+The FastAPI lifespan's `finally` block calls `deps.aclose()`, which
+walks the dependency bundle and releases every owner that holds an
+external connection:
+
+1. `SchenkerClient.aclose()` closes the upstream httpx pool.
+2. `TrackingService.aclose()` closes its cache backend
+   (`UpstashCache` releases its upstash-redis httpx pool;
+   `TTLCache` is a no-op).
+3. `TokenStore.aclose()` closes the upstash-redis httpx pool when
+   `TOKEN_STORE=upstash`; `getattr`-guarded so `InMemoryTokenStore`
+   stays a no-op.
+
+The `getattr(..., None)` guard pattern is deliberate — it lets new
+backends opt in to cleanup by declaring `aclose()` without
+requiring every existing backend to be updated.
+
 ## Failure surface
 
 Errors from domain handlers (`Db2stError` subclasses) are translated to MCP
