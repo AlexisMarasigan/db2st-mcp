@@ -25,7 +25,7 @@ Phased plan. Each sprint ends with a runnable, demonstrable artifact.
       `vcrpy` dev dep was dropped in iter 97.)
 - [x] Integration test against the 11 sample refs from the brief
 
-**Exit:** MCP Inspector calls `track_shipment` and returns structured data for every sample ref.
+**Exit:** MCP Inspector calls `track_shipment` and returns structured data for sample refs that the upstream resolves (some are rate-limited from any given dev IP — see `docs/UPSTREAM.md`). Sprint 4 added `track_shipment_events` as a second tool over the same orchestrator.
 
 ## Sprint 2 — Auth domain
 
