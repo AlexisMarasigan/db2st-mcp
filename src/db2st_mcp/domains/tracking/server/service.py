@@ -73,11 +73,10 @@ class TrackingService:
 
     async def get_shipment(self, reference: str) -> Shipment:
         ref = reference.strip()
-        if self._cache is not None:
-            cached = await self._cache.get(ref)
-            if cached is not None:
-                _log.info("tracking.cache_hit", reference=ref)
-                return cached
+        cached = await self._cache_get(ref)
+        if cached is not None:
+            _log.info("tracking.cache_hit", reference=ref)
+            return cached
 
         if self._breaker is not None and self._breaker.open:
             return await self._fallback_or_fail(ref, reason="breaker_open")
@@ -97,9 +96,46 @@ class TrackingService:
         else:
             if self._breaker is not None:
                 self._breaker.record_success()
-            if self._cache is not None:
-                await self._cache.set(ref, shipment)
+            await self._cache_set(ref, shipment)
             return shipment
+
+    async def _cache_get(self, ref: str) -> Shipment | None:
+        """Cache read that degrades to a miss on backend failure.
+
+        A `UpstashCache` outage would otherwise propagate through the
+        service to the wire. The cache is a latency optimisation, not
+        a correctness dependency — treat any read error as a miss and
+        let the upstream path fire.
+        """
+        if self._cache is None:
+            return None
+        try:
+            return await self._cache.get(ref)
+        except Exception as e:
+            _log.warning(
+                "tracking.cache_get_failed",
+                reference=ref,
+                cause=type(e).__name__,
+            )
+            return None
+
+    async def _cache_set(self, ref: str, shipment: Shipment) -> None:
+        """Cache write that swallows backend failures.
+
+        Mirror of `_cache_get`. We already have the result; failing the
+        request because the cache couldn't store it would be a regression
+        from the no-cache path.
+        """
+        if self._cache is None:
+            return
+        try:
+            await self._cache.set(ref, shipment)
+        except Exception as e:
+            _log.warning(
+                "tracking.cache_set_failed",
+                reference=ref,
+                cause=type(e).__name__,
+            )
 
     async def _fallback_or_fail(self, reference: str, *, reason: str) -> Shipment:
         if self._fallback is None:
@@ -109,6 +145,5 @@ class TrackingService:
             )
         _log.warning("tracking.fallback_engaged", reference=reference, reason=reason)
         shipment = await self._fallback.fetch(reference)
-        if self._cache is not None:
-            await self._cache.set(reference, shipment)
+        await self._cache_set(reference, shipment)
         return shipment

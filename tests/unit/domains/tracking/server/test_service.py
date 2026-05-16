@@ -189,3 +189,65 @@ async def test_aclose_is_safe_when_no_cache_configured() -> None:
     service = TrackingService(client)
     await service.aclose()  # must not raise
     await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_cache_get_failure_degrades_to_miss(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A cache backend raising on `get` must not propagate; the service
+    treats it as a miss and falls through to the upstream path. The
+    cache is a latency optimisation, not a correctness dependency."""
+    client = _make_client()
+
+    class _BrokenCache:
+        async def get(self, key: str) -> Shipment | None:
+            raise RuntimeError("upstash unreachable")
+
+        async def set(self, key: str, value: Shipment) -> None:
+            return None
+
+    service = TrackingService(client, cache=_BrokenCache())
+
+    # Upstream returns a real shipment despite the cache error.
+    with respx.mock(base_url=API) as mock:
+        mock.get("/app/tracking-public/").respond(200, html="<html/>")
+        mock.get("/nges-portal/api/public/tracking-public/shipments").respond(
+            200, json=[{"id": "X-REF", "type": "land_se"}]
+        )
+        mock.get(
+            "/nges-portal/api/public/tracking-public/shipments/land/se/X-REF"
+        ).respond(200, json={"sender": {"name": "S"}, "receiver": {"name": "R"}})
+        shipment = await service.get_shipment("X-REF")
+
+    assert shipment.reference == "X-REF"
+    await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_cache_set_failure_does_not_propagate() -> None:
+    """Mirror of the read case. We already have the shipment; failing
+    the request because the cache couldn't store it would regress from
+    the no-cache path."""
+    client = _make_client()
+
+    class _BrokenSetCache:
+        async def get(self, key: str) -> Shipment | None:
+            return None
+
+        async def set(self, key: str, value: Shipment) -> None:
+            raise RuntimeError("upstash unreachable")
+
+    service = TrackingService(client, cache=_BrokenSetCache())
+
+    with respx.mock(base_url=API) as mock:
+        mock.get("/app/tracking-public/").respond(200, html="<html/>")
+        mock.get("/nges-portal/api/public/tracking-public/shipments").respond(
+            200, json=[{"id": "X-REF", "type": "land_se"}]
+        )
+        mock.get(
+            "/nges-portal/api/public/tracking-public/shipments/land/se/X-REF"
+        ).respond(200, json={"sender": {"name": "S"}, "receiver": {"name": "R"}})
+        shipment = await service.get_shipment("X-REF")
+
+    # Request succeeded despite the set() failure.
+    assert shipment.reference == "X-REF"
+    await client.aclose()
