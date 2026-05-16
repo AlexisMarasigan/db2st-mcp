@@ -90,10 +90,10 @@ None.
 
 | Cause | Domain error | Code |
 |---|---|---|
-| Reference not found | `NotFoundError` | `not_found` |
-| Upstream timeout / 5xx | `UpstreamUnavailableError` | `upstream_unavailable` |
-| Upstream payload shape change | `ParseError` | `parse_error` |
-| Reference format invalid | `InvalidInputError` | `invalid_input` |
+| Reference not found (upstream 404 or empty resolver) | `NotFoundError` | `not_found` |
+| Upstream timeout, 5xx, 429, other 4xx, network/connection error, non-JSON response body | `UpstreamUnavailableError` | `upstream_unavailable` |
+| Upstream payload shape change (detail endpoint returns non-dict, or parse raises) | `ParseError` | `parse_error` |
+| Reference format invalid (empty / whitespace-only / outside `[4..64]` chars) | `InvalidInputError` | `invalid_input` |
 
 ## Tests
 
