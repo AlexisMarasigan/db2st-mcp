@@ -9,10 +9,20 @@ land on `main` without a bump.
 
 ### Added
 
+- Token-id correlation: `bearer_auth_middleware` now binds `token_id`
+  and `plan` to structlog's contextvars on successful auth, so every
+  log line in an authenticated request can be traced back to the
+  caller. Regression-pinned by
+  `test_middleware_binds_token_id_to_contextvars`.
+- Parametrised dispatch-table test for `SchenkerClient.fetch_detail`
+  covering every entry in `DETAIL_PATHS` (land, land_au, ocean, air,
+  dsv, atol, cos, unknown).
+- `test_fetch_detail_raises_parse_error_for_non_dict_payload` pins
+  the iter-19 `ParseError` branch.
 - `.github/workflows/release.yml` — tagged release pipeline. Verifies
   the tag matches the `pyproject.toml` version, runs the full gate
   set (ruff, ruff-format, mypy strict, unit tests, verify-docs,
-  bandit medium+), builds the wheel + sdist via `uv build`,
+  bandit at every severity), builds the wheel + sdist via `uv build`,
   generates SHA256SUMS, and creates a GitHub Release with auto
   notes + artefacts attached. `workflow_dispatch` lets a maintainer
   re-run for an existing tag.
@@ -78,7 +88,9 @@ land on `main` without a bump.
 - OpenTelemetry opt-in instrumentation (`[otel]` extra) and a
   request-id correlation middleware.
 - k6 load-test script (`scripts/loadtest.k6.js`).
-- Bandit static security scan as a CI job.
+- Bandit static security scan as a CI job — gate at zero findings at
+  every severity level; intentional exceptions carry a `# nosec BXXX`
+  annotation with rationale.
 
 ### Changed
 
@@ -95,6 +107,15 @@ land on `main` without a bump.
 
 ### Fixed
 
+- Token-id was never reaching structlog contextvars. The previous
+  `request_id_middleware` tried to read `request.state.auth` and bind
+  `token_id` — but it ran outermost (added last in Starlette LIFO
+  order), so `state.auth` was always None and the binding silently
+  never happened. Every production log line was missing the caller
+  correlation it was supposed to carry. Now `request_id_middleware`
+  binds only `request_id` + `path`; `bearer_auth_middleware` binds
+  `token_id` + `plan` after successful auth, where the timing is
+  actually correct.
 - Lifespan composition bug above (production HTTP transport path).
 - `SchenkerClient.fetch_detail` now raises `ParseError` if the upstream
   payload isn't an object, matching the parser's contract.
