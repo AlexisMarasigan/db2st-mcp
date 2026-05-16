@@ -118,6 +118,12 @@ land on `main` without a bump.
   that own external resources + chain into the orchestrator's
   `aclose()`. Captures the conventions iters 111–114 + 130–132
   established.
+- docs/TESTING.md gained a "Shared test helpers" section
+  cataloguing the two reusable helpers
+  (`SpyLogger`, `terminate_cleanly`) and the per-test-file
+  `spy_log` fixture pattern that wires `SpyLogger` to a target
+  module's `_log`. Closes the discovery gap — until now finding
+  either helper required reading the conftest source.
 
 ### Security
 
