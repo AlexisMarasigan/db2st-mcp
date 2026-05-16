@@ -37,25 +37,42 @@ Phased plan. Each sprint ends with a runnable, demonstrable artifact.
 ## Sprint 3 — Scale & observability
 
 - [x] Knative `func.yaml` + Dockerfile
-- [x] Deploy to local `kind` cluster
-- [x] Tune autoscaler (concurrency target, min/max replicas)
-- [x] Structured JSON logs (request/token correlation)
-- [x] OpenTelemetry traces (tool dispatch + upstream fetch)
-- [x] Load test (k6) at 100 RPS, p95 < 800ms
+- [x] Knative manifest + local-cluster bootstrap script
+      (`deploy/knative-serving.yaml`, `scripts/local-cluster.sh`).
+      Scripted but not yet executed against a real cluster — needs
+      a host with `kind` / `kubectl` / `func` installed.
+- [x] Autoscaler annotations on `func.yaml` (concurrency target 50,
+      min 0, max 20). Real load-driven tuning is deferred to a
+      cluster-ready run.
+- [x] Structured JSON logs (request_id + token_id correlation via
+      structlog contextvars; token binding lives in the auth
+      middleware after iter 29's fix).
+- [x] OpenTelemetry traces opt-in via `[otel]` extra + the
+      `OTEL_EXPORTER_OTLP_ENDPOINT` env var. No-op when unset.
+- [x] k6 load-test script in `scripts/loadtest.k6.js`. Not yet
+      executed against a running server — same blocker as the
+      cluster deploy.
 
-**Exit:** load test green; Grafana/Tempo screenshots in `docs/`.
+**Exit:** load-test script + autoscaler annotations + structured logs
+ship in this iteration; **real cluster execution + p95<800ms
+validation are deferred until a cluster host is available**.
 
 ## Sprint 4 — Hardening
 
 - [x] Circuit breaker around Schenker upstream
-- [x] Response cache (60s TTL keyed on ref, KV-backed)
-- [x] Schema-drift detector for upstream payload
-- [x] Public demo endpoint with free-tier token
+- [x] Response cache (60s TTL keyed on ref) — **in-memory `TTLCache`
+      (`shared/cache.py`)**, not KV-backed. KV-backed cache that
+      survives pod churn is deferred to the Stretch section.
+- [x] Schema-drift detector for upstream payload (`shared/drift.py`).
+- [ ] Public demo endpoint with free-tier token. Deferred — needs a
+      hosting environment to deploy into. Tracked in Stretch.
 - [x] Stretch tool: `track_shipment_events` — ships as a
       shipment-level events timeline. The per-package refinement is
       still in Stretch (needs upstream observation).
 
-**Exit:** demo endpoint live; one-command `curl` example in README.
+**Exit:** circuit breaker + in-memory cache + drift detector + events
+tool live. Public demo endpoint deferred until a hosting target is
+chosen.
 
 ## Stretch
 
