@@ -90,3 +90,67 @@ async def test_service_breaker_opens_after_failures() -> None:
         await service.get_shipment("Y")
     assert breaker.open is True
     await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_service_404_records_breaker_success() -> None:
+    """A `NotFoundError` from upstream is a healthy "no such record"
+    response, not a service failure. The breaker should treat it as
+    success (resetting any prior failures) and re-raise.
+    """
+    from db2st_mcp.shared.errors import NotFoundError
+
+    client = _make_client()
+    breaker = CircuitBreaker(failure_threshold=5, cooldown_seconds=10)
+    breaker.record_failure()  # prime so success-reset is observable
+    service = TrackingService(client, breaker=breaker)
+
+    with respx.mock(base_url=API) as mock:
+        mock.get("/app/tracking-public/").respond(200, html="<html/>")
+        mock.get("/nges-portal/api/public/tracking-public/shipments").respond(404)
+        with pytest.raises(NotFoundError):
+            await service.get_shipment("missing")
+
+    # Prior failures cleared by the success record.
+    assert breaker.state == "closed"
+    await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_service_falls_back_when_breaker_open_and_fallback_configured() -> None:
+    """When the breaker is open and an HTML fallback is configured,
+    the service routes to the fallback and caches the result.
+    """
+
+    class _StubFallback:
+        def __init__(self, shipment: Shipment) -> None:
+            self._shipment = shipment
+            self.calls: list[str] = []
+
+        async def fetch(self, reference: str) -> Shipment:
+            self.calls.append(reference)
+            return self._shipment
+
+    client = _make_client()
+    breaker = CircuitBreaker(failure_threshold=1, cooldown_seconds=10)
+    breaker.record_failure()  # force open
+    assert breaker.open is True
+
+    fallback_shipment = Shipment(
+        reference="Z-REF", type="unknown", source="html_fallback"
+    )
+    fallback = _StubFallback(fallback_shipment)
+    cache: TTLCache[Shipment] = TTLCache(maxsize=4, ttl_seconds=60)
+    service = TrackingService(client, cache=cache, breaker=breaker, html_fallback=fallback)
+
+    # Breaker is open → service skips the primary path and goes
+    # straight to the fallback.
+    shipment = await service.get_shipment("Z-REF")
+    assert shipment is fallback_shipment
+    assert fallback.calls == ["Z-REF"]
+    # Result is cached so a repeat doesn't hit the fallback again.
+    again = await service.get_shipment("Z-REF")
+    assert again is fallback_shipment
+    assert fallback.calls == ["Z-REF"]  # still one call
+
+    await client.aclose()
