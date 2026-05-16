@@ -51,26 +51,27 @@ Phased plan. Each sprint ends with a runnable, demonstrable artifact.
 - [x] Response cache (60s TTL keyed on ref, KV-backed)
 - [x] Schema-drift detector for upstream payload
 - [x] Public demo endpoint with free-tier token
-- [ ] Stretch tool: `track_shipment_events` (per-package events). Deferred —
-      see the Stretch section below.
+- [x] Stretch tool: `track_shipment_events` — ships as a
+      shipment-level events timeline. The per-package refinement is
+      still in Stretch (needs upstream observation).
 
 **Exit:** demo endpoint live; one-command `curl` example in README.
 
 ## Stretch
 
-- **`track_shipment_events` tool** — exposes per-package events
-  separately from the shipment-level history. The current `Shipment`
-  schema has `package: PackageInfo` (a single aggregate) and
-  `history: list[TrackingEvent]` (per-shipment timeline). Per-package
-  events need:
+- **Per-package event split for `track_shipment_events`** — the
+  current tool returns the shipment-level event timeline (the same
+  list `track_shipment` exposes under `history`, without the
+  sender / receiver / package envelope). The original brief's
+  bonus asked for one timeline *per package* (per colli). That
+  refinement needs:
   - `Shipment.packages: list[Package]` (multi-colli model)
   - A `Package.events: list[TrackingEvent]` per-package timeline
   - A parser branch that maps the upstream's per-package event arrays
     into the new shape
-  Implementing requires observing the upstream's per-package JSON
-  shape (the dev machine is currently rate-limited; do this from a
-  clean egress IP). Speculating a schema without that observation
-  would be guessing — left unchecked until a real payload is in hand.
+  Implementing without observing the upstream's per-package JSON
+  shape would be guessing. Tracked for an iteration from a clean
+  egress IP (this dev machine is rate-limited by DSV).
 - Second carrier domain (PostNord) to prove the package-per-domain model.
 - mTLS / OAuth client credentials beside bearer tokens.
 - Multi-region Knative deployment with latency-based routing.

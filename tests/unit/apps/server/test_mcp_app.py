@@ -64,3 +64,38 @@ async def test_track_shipment_tool_propagates_validation_errors() -> None:
     # that reshuffles the hierarchy doesn't break this.
     with pytest.raises(Exception, match=r"(?i)reference|validation|short"):
         await mcp.call_tool("track_shipment", arguments={"reference": "a"})
+
+
+@pytest.mark.asyncio
+async def test_track_shipment_events_tool_returns_event_list() -> None:
+    """The second registered tool returns just the timeline (sender /
+    receiver / package omitted). Useful for poll-style clients.
+    """
+    from datetime import UTC, datetime
+
+    from db2st_mcp.domains.tracking.shared.schemas import TrackingEvent
+
+    events = [
+        TrackingEvent(at=datetime(2026, 5, 15, 10, tzinfo=UTC), status="DELIVERED"),
+    ]
+    stub = _StubService(
+        Shipment(reference="1806203236", type="land_se", history=events)
+    )
+    mcp = build_mcp_server(stub)  # type: ignore[arg-type]
+
+    result = await mcp.call_tool(
+        "track_shipment_events", arguments={"reference": "1806203236"}
+    )
+
+    structured: Any
+    if isinstance(result, tuple):
+        _, structured = result
+    else:
+        structured = result
+
+    # FastMCP wraps a list return into `{"result": [...]}`. Accept either
+    # the raw list or the wrapped form.
+    items = structured.get("result", structured) if isinstance(structured, dict) else structured
+    assert isinstance(items, list)
+    assert len(items) == 1
+    assert items[0]["status"] == "DELIVERED"
