@@ -11,6 +11,11 @@ on:
 permissions:
   contents: read
   security-events: write
+  # `actions: read` is required by github/codeql-action/analyze@v3 on
+  # private repos: the action calls `GET /repos/{owner}/{repo}/actions/runs/{run_id}`
+  # to attach the SARIF upload to the workflow run, and that endpoint
+  # rejects the default GITHUB_TOKEN unless the workflow declares it.
+  actions: read
 
 jobs:
   bandit:

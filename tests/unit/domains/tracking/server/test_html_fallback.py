@@ -90,7 +90,12 @@ def test_to_shipment_falls_back_to_bodyText_when_dom_events_empty() -> None:
             "Footer with no date pattern",
         ]
     )
-    data = {"bodyText": body, "events": [], "senderName": None, "receiverName": None}
+    data: dict[str, object] = {
+        "bodyText": body,
+        "events": [],
+        "senderName": None,
+        "receiverName": None,
+    }
     shipment = _to_shipment("X", data)
     assert len(shipment.history) == 2
     assert shipment.history[0].status == "Delivered"

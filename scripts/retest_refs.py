@@ -50,7 +50,7 @@ async def main() -> None:
                 )
             except Db2stError as e:
                 detail = f"{type(e).__name__}: {e}"
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 detail = f"RAW {type(e).__name__}: {e}"
             print(f"{ref} -> {detail}")
     finally:
