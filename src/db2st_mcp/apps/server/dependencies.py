@@ -92,13 +92,11 @@ def build_deps(settings: Settings) -> AppDeps:
     )
 
 
-# B105 (hardcoded-password-string): "upstash" is a backend enum literal,
-# not a credential.
 def _build_cache(settings: Settings) -> _Cache:
     """Pick the response-cache backend. `memory` is per-pod (lost on
     restart); `upstash` is shared across pods and survives churn."""
     ttl = float(settings.response_cache_ttl_seconds)
-    if settings.response_cache_backend == "upstash":  # nosec B105
+    if settings.response_cache_backend == "upstash":
         from db2st_mcp.shared.upstash_cache import UpstashCache
 
         codec: CacheCodec[Shipment] = CacheCodec(
