@@ -79,6 +79,37 @@ def test_auth_failure_message_is_identical_for_missing_and_invalid() -> None:
     assert missing["message"] == wrong["message"] == revoked_marker["message"]
 
 
+def test_auth_failure_logs_distinguish_cause(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Wire response stays generic, but the internal log line MUST
+    carry a distinct `reason` so ops dashboards can split 401s by
+    cause. Pairs with the message-identicality test above: outside
+    the trust boundary the three branches look the same; inside,
+    they don't.
+
+    Patches the middleware module's bound logger directly because
+    structlog caches its processor chain at first use, which makes
+    `caplog`-based assertions order-dependent across the suite.
+    """
+    from db2st_mcp.domains.auth.server import middleware as mw
+
+    calls: list[tuple[str, dict[str, object]]] = []
+
+    class _SpyLogger:
+        def info(self, event: str, **kw: object) -> None:
+            calls.append((event, kw))
+
+    monkeypatch.setattr(mw, "_log", _SpyLogger())
+
+    store = InMemoryTokenStore()
+    client = TestClient(_app(store))
+    client.get("/protected")  # missing
+    client.get("/protected", headers={"Authorization": "Bearer nope"})  # unknown
+
+    reasons = {kw.get("reason") for event, kw in calls if event == "auth.failure"}
+    assert "header_missing_or_malformed" in reasons
+    assert "token_unknown" in reasons
+
+
 @pytest.mark.asyncio
 async def test_authenticate_returns_auth_context(monkeypatch) -> None:  # type: ignore[no-untyped-def]
     store = InMemoryTokenStore()
