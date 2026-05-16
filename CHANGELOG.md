@@ -39,6 +39,28 @@ land on `main` without a bump.
   response body is identical across all four branches by design
   (iter-109) — the log line is the only place the cause shows up.
 
+### Internal
+
+- **Test infrastructure consolidation** (iters 118–123). The iter-
+  111-114 observability features each added a spy-the-`_log` test.
+  Each test originally defined its own local `_SpyLogger` class
+  and called `monkeypatch.setattr` inline (or, in the breaker
+  case, swapped the module-level `_log` with `try/finally`). Over
+  six iterations the pattern was extracted into:
+  - `SpyLogger` class in `tests/conftest.py` covering `info`,
+    `warning`, and `exception` levels with a uniform
+    `(event_name, kwargs)` capture shape.
+  - Per-test-file `spy_log` fixtures (one per module-under-test;
+    a fixture-factory was rejected as more indirection than three
+    callers warrant) that `monkeypatch.setattr` the target
+    module's `_log` to a `SpyLogger()` and rely on pytest's
+    automatic teardown.
+  - Strengthened `test_route_exception_propagates_via_500` to
+    assert the `request.failed` log line is actually emitted, not
+    just that the 500 status surfaces — without the assertion,
+    removing the `_log.exception(...)` call would have left the
+    test green.
+
 ### Security
 
 - **Closed an auth-response side channel.** Three branches of
