@@ -7,6 +7,30 @@ land on `main` without a bump.
 
 ## [Unreleased]
 
+### Security
+
+- **Closed an auth-response side channel.** Three branches of
+  `bearer_auth_middleware.authenticate()` (missing `Authorization`
+  header, wrong token, revoked token) returned the same
+  `status_code` and `error` code but different `message` strings
+  ("missing bearer token" vs "invalid token"). An attacker
+  enumerating tokens could distinguish "no header" from "wrong
+  token" by reading the response body. Collapsed all three onto
+  a single `_AUTH_FAILURE_MSG = "missing or invalid bearer token"`
+  constant; pinned by a new unit test
+  (`test_auth_failure_message_is_identical_for_missing_and_invalid`)
+  that asserts identicality across all three branches. The
+  threat-model row in `docs/AUTH.md` previously promised this
+  invariant ("Generic 401 for missing or invalid"); the code now
+  matches the doc.
+- Threat-model honesty pass on `docs/AUTH.md`: the brute-force row
+  claimed `rate-limited 401`, but no per-IP rate limit exists in
+  the middleware. The 2^256 keyspace makes brute force
+  computationally absurd anyway, but promising a control we don't
+  have is a security-doc lie. Rewrote the row to be honest and
+  added a Stretch entry ("Per-IP rate limit on auth failures") so
+  the defence-in-depth gap is tracked.
+
 ### Added
 
 - **KV-backed response cache** (`shared/upstash_cache.py`). Generic on
@@ -44,6 +68,34 @@ land on `main` without a bump.
   trigger condition and exact install command. `uv sync --group dev`
   deliberately doesn't pull `[project.optional-dependencies]`; the
   doc table tells devs when they need to.
+- **Deeper doc-vs-code audit pass** (iters 102–108). More substantive
+  drift caught after the iter-84-95 sweep:
+  - ROADMAP Sprint 1 listed `vcrpy or hand-rolled` for fixtures, but
+    `vcrpy` was never imported and iter-97 removed it. Replaced with
+    what actually shipped (hand-rolled JSON + `respx` for httpx
+    transport mocking).
+  - ROADMAP Sprint 2 + auth `DOMAIN.md` described the quota as a
+    "sliding" / "rolling" window. The actual implementation is a UTC
+    calendar-day counter (`quota:{token_id}:{YYYY-MM-DD}`) that
+    hard-resets at 00:00 UTC. Operator-meaningful difference:
+    rate-limited at 23:50 means rate-limited for ~10 minutes, not
+    24h. Three doc spots corrected with an explicit 23:59→00:00
+    example.
+  - ROADMAP Sprint 0 still labelled `(current)`. Removed — the
+    roadmap reads cleanest as a historical record now that Sprints
+    1-4 are all done.
+- **Dead-code cleanups.** Two unused re-export shells dropped after
+  grep confirmed nobody imports through the package surface:
+  - `domains/auth/server/store.py` imported `AuthContext` and
+    `TokenStore` only to re-export them via `__all__`. Neither name
+    is used elsewhere (`AuthContext` is constructed in the
+    middleware; `TokenStore` is a Protocol that `InMemoryTokenStore`
+    duck-types). Pared `__all__` to `["InMemoryTokenStore"]`.
+  - `domains/tracking/shared/__init__.py` re-exported 5 schemas, but
+    every one of the 14 in-tree consumers goes direct to
+    `tracking.shared.schemas`. The re-export list was also stale
+    (missing `ShipmentType`). Replaced with a docstring pointing at
+    the submodule.
 
 ### Fixed
 
