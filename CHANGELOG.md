@@ -7,6 +7,27 @@ land on `main` without a bump.
 
 ## [Unreleased]
 
+### Changed
+
+- Dependabot now also watches the `Dockerfile` base image, in addition
+  to `pip` and `github-actions`. Weekly cadence preserved.
+- `tool.mypy.files` extended to include `scripts/` (was `src` + `tests`
+  only). The three production-adjacent helper scripts that ship in the
+  sdist — `verify_docs.py`, `sync_domain.py`, `example_call.py` — are
+  now part of the strict-typecheck surface (84 source files, was 81).
+
+### Fixed
+
+- ROADMAP Sprint 3/4 had several `[x]` marks that overstated what
+  shipped: cluster deploy, autoscaler tuning, and load-test execution
+  (Sprint 3) all ship as scripts/manifests but were never executed
+  against a real cluster; "Response cache (KV-backed)" was actually
+  in-memory `TTLCache`; "Public demo endpoint" was never deployed.
+  Rewritten with the concrete blocker captured inline and the Exit
+  lines updated. Same honesty pattern as iter 55.
+- `.gitignore` had a duplicate `dist/` entry (one near the top, one
+  later); deduped.
+
 ### Added
 
 - `python -m db2st_mcp` invocation works alongside the `db2st-mcp`
