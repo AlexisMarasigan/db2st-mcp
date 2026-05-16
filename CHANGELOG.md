@@ -9,6 +9,19 @@ land on `main` without a bump.
 
 ### Fixed
 
+- **Upstash httpx pools now released on graceful shutdown.**
+  `AppDeps.aclose()` (called from the FastAPI lifespan's `finally`)
+  was only closing the `SchenkerClient`. Both `UpstashTokenStore`
+  and `UpstashCache` wrap upstash-redis, whose `Redis` client holds
+  its own httpx pool — and that pool sat open until GC. Added
+  `aclose()` to both classes; refactored ownership so each owner
+  closes its own state (`TrackingService.aclose()` walks its cache
+  backend; `AppDeps.aclose()` walks the three top-level owners).
+  Encapsulation: dependencies.py no longer reaches into
+  `tracking_service._cache`. Pinned by 6 new tests covering both
+  positive and `getattr`-guarded skip paths.
+- APP.md gained a Shutdown section documenting the three-owner
+  release chain so the lifespan's `finally` path is discoverable.
 - **Wired the schema-drift detector into the upstream client**
   (`shared/drift.py`). Sprint 4 listed it `[x]` and the module
   shipped with unit tests, but `grep -rn "from db2st_mcp.shared.drift"
