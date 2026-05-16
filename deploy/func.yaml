@@ -39,6 +39,15 @@ envs:
     value: "{{ secret:upstash-creds:url }}"
   - name: UPSTASH_REDIS_REST_TOKEN
     value: "{{ secret:upstash-creds:token }}"
+  # Response cache backend. Default ("memory") is per-pod and lost on
+  # restart — fine for development. In a multi-pod deployment, set to
+  # "upstash" so the shipment cache is shared across pods and survives
+  # pod churn up to RESPONSE_CACHE_TTL_SECONDS. Reuses the same Upstash
+  # credentials as the token store.
+  - name: RESPONSE_CACHE_BACKEND
+    value: upstash
+  - name: RESPONSE_CACHE_TTL_SECONDS
+    value: "60"
   # Replace with the public hostname(s) of this Knative Service. Without
   # this, the MCP transport returns HTTP 421 for any external Host
   # header (DNS-rebinding protection is on by default — see

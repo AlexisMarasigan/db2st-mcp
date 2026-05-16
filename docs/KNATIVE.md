@@ -36,6 +36,9 @@ envs:
   - { name: TOKEN_STORE, value: upstash }
   - { name: UPSTASH_REDIS_REST_URL,   value: "{{ secret:upstash-creds:url }}" }
   - { name: UPSTASH_REDIS_REST_TOKEN, value: "{{ secret:upstash-creds:token }}" }
+  # Shared response cache so a hit from one pod is visible to all of them.
+  - { name: RESPONSE_CACHE_BACKEND, value: upstash }
+  - { name: RESPONSE_CACHE_TTL_SECONDS, value: "60" }
   # Production hostname(s) — required, otherwise the MCP transport rejects
   # external Host headers with HTTP 421. Comma-separated.
   - { name: MCP_ALLOWED_HOSTS, value: "mcp.example.com" }
