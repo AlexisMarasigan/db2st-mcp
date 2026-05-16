@@ -20,6 +20,8 @@ from starlette.responses import JSONResponse, Response
 from db2st_mcp.domains.auth.shared import AuthContext, TokenStore
 from db2st_mcp.shared.errors import QuotaExceededError, UnauthorizedError
 
+_log = structlog.get_logger(__name__)
+
 # Single generic message for every auth-failure branch so the response
 # body does not leak whether the header was absent vs. the token was
 # wrong vs. the token was revoked. See docs/AUTH.md threat model
@@ -30,6 +32,11 @@ _AUTH_FAILURE_MSG = "missing or invalid bearer token"
 def _extract_bearer(request: Request) -> str:
     header = request.headers.get("authorization")
     if not header or not header.lower().startswith("bearer "):
+        # Logged with a distinct `reason` so ops dashboards can split
+        # 401s by cause (header missing vs. token wrong vs. token
+        # revoked). The response stays generic; the log line never
+        # leaves the trust boundary.
+        _log.info("auth.failure", reason="header_missing_or_malformed")
         raise UnauthorizedError(_AUTH_FAILURE_MSG)
     return header[len("Bearer ") :].strip()
 
@@ -46,7 +53,11 @@ async def authenticate(
     """
     secret = _extract_bearer(request)
     record = await store.lookup(secret)
-    if record is None or record.revoked_at is not None:
+    if record is None:
+        _log.info("auth.failure", reason="token_unknown")
+        raise UnauthorizedError(_AUTH_FAILURE_MSG)
+    if record.revoked_at is not None:
+        _log.info("auth.failure", reason="token_revoked", token_id=record.id)
         raise UnauthorizedError(_AUTH_FAILURE_MSG)
     outcome = await store.consume(record.id, datetime.now(UTC).date())
     if outcome == "exhausted":
