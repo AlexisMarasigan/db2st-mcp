@@ -55,6 +55,23 @@ Quota key: `quota:{token_id}:{YYYY-MM-DD}`. `INCR` returns new value; > limit â†
 | Header smuggling | Reject malformed `Authorization` early. |
 | Error-message side channel | Every auth-failure branch (missing header, wrong token, revoked token) returns the same `error: "unauthorized"` and the identical `message: "missing or invalid bearer token"`. Pinned by `test_auth_failure_message_is_identical_for_missing_and_invalid`. |
 
+## Observability
+
+Every auth failure emits a single structlog event so operators can
+split 401s by cause without inspecting raw responses. The wire
+response stays generic (see the threat-model row above); the log
+line never leaves the trust boundary.
+
+| Event | Fields | When |
+|---|---|---|
+| `auth.failure` | `reason="header_missing_or_malformed"` | No `Authorization` header, or prefix not `bearer ` (case-insensitive). |
+| `auth.failure` | `reason="token_unknown"` | Header well-formed, hash not in the store. |
+| `auth.failure` | `reason="token_revoked"`, `token_id` | Header well-formed, hash in store, `revoked_at` set. `token_id` is logged because it's actionable context for the operator investigating a stuck client. |
+
+Group dashboards by `reason` to distinguish bot scanning
+(`header_missing_or_malformed` dominates) from expired/revoked
+customer tokens (`token_unknown` / `token_revoked` dominate).
+
 ## Out of scope (v1)
 
 OAuth/OIDC, per-tool ACLs, audit-log retention policy.
