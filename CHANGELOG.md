@@ -163,6 +163,13 @@ land on `main` without a bump.
 
 ### Observability
 
+- `app.starting` boot event now logs `cache_backend` alongside
+  `token_store`. Since iter-80's KV-backed cache, the cache choice
+  is the second-most operationally-relevant backend decision —
+  and an operator restarting a pod previously couldn't tell from
+  logs whether `RESPONSE_CACHE_BACKEND=memory` or `upstash` was
+  in effect. Three observable values: `"TTLCache"`, `"UpstashCache"`,
+  or `"none"` if cache is unconfigured.
 - **Structured log events on every auth-failure branch**
   (`auth.failure` with `reason=header_missing_or_malformed` /
   `token_unknown` / `token_revoked`). The wire response stays
