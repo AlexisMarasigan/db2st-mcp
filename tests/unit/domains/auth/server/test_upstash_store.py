@@ -45,8 +45,14 @@ def fake_redis(monkeypatch: pytest.MonkeyPatch) -> type[FakeAsyncRedis]:
     fake_module = types.ModuleType("upstash_redis")
     asyncio_module = types.ModuleType("upstash_redis.asyncio")
     asyncio_module.Redis = FakeAsyncRedis  # type: ignore[attr-defined]
+    # iter-174 added `from upstash_redis.errors import UpstashError`
+    # to the constructor. The fake fixture needs to expose that too or
+    # construction fails before any test method runs.
+    errors_module = types.ModuleType("upstash_redis.errors")
+    errors_module.UpstashError = type("UpstashError", (Exception,), {})  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "upstash_redis", fake_module)
     monkeypatch.setitem(sys.modules, "upstash_redis.asyncio", asyncio_module)
+    monkeypatch.setitem(sys.modules, "upstash_redis.errors", errors_module)
     return FakeAsyncRedis
 
 
@@ -237,3 +243,42 @@ async def test_aclose_tolerates_missing_close_method(
 ) -> None:
     store = _store(fake_redis)
     await store.aclose()
+
+
+@pytest.mark.asyncio
+async def test_lookup_maps_upstream_error_to_upstream_unavailable(
+    fake_redis: type[FakeAsyncRedis],
+) -> None:
+    """If Upstash is unreachable (network failure, 5xx, etc.) the raw
+    httpx / UpstashError would otherwise bubble through the auth
+    middleware as a 500 with the traceback in the body. The store now
+    catches and re-raises as UpstreamUnavailableError so the wire
+    response stays in the project's Db2stError taxonomy."""
+    from db2st_mcp.shared.errors import UpstreamUnavailableError
+
+    store = _store(fake_redis)
+    from upstash_redis.errors import UpstashError  # the fake one
+
+    async def _boom(*_a: object, **_kw: object) -> object:
+        raise UpstashError("simulated outage")
+
+    store._redis.get = _boom
+    with pytest.raises(UpstreamUnavailableError, match="token store unreachable"):
+        await store.lookup("anything")
+
+
+@pytest.mark.asyncio
+async def test_consume_maps_upstream_error_to_upstream_unavailable(
+    fake_redis: type[FakeAsyncRedis],
+) -> None:
+    from db2st_mcp.shared.errors import UpstreamUnavailableError
+
+    store = _store(fake_redis)
+    from upstash_redis.errors import UpstashError
+
+    async def _boom(*_a: object, **_kw: object) -> object:
+        raise UpstashError("simulated outage")
+
+    store._redis.incr = _boom
+    with pytest.raises(UpstreamUnavailableError, match="token store unreachable"):
+        await store.consume("token-id", date(2026, 1, 1))

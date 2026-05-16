@@ -21,7 +21,7 @@ from ulid import ULID
 
 from db2st_mcp.domains.auth.shared import RemainingQuota, TokenPlan, TokenRecord
 from db2st_mcp.shared.config import Settings
-from db2st_mcp.shared.errors import Db2stError
+from db2st_mcp.shared.errors import Db2stError, UpstreamUnavailableError
 
 
 def _hash(secret: str) -> str:
@@ -41,6 +41,16 @@ class UpstashTokenStore:
         except ImportError as e:  # pragma: no cover — verified at install time
             raise Db2stError("upstash-redis not installed; reinstall with the [redis] extra") from e
         self._redis = Redis(url=url, token=token)
+        # Exception classes we map to UpstreamUnavailableError on the
+        # auth hot path. Imported lazily because httpx + upstash_redis
+        # are extras-conditional.
+        import httpx
+        from upstash_redis.errors import UpstashError
+
+        self._upstream_errors: tuple[type[BaseException], ...] = (
+            UpstashError,
+            httpx.HTTPError,
+        )
 
     @classmethod
     def from_settings(cls, settings: Settings) -> UpstashTokenStore:
@@ -52,22 +62,39 @@ class UpstashTokenStore:
         )
 
     async def lookup(self, secret: str) -> TokenRecord | None:
-        raw: Any = await self._redis.get(f"token:hash:{_hash(secret)}")
+        # Upstash REST errors (network, 5xx from their gateway, etc.)
+        # arrive here as httpx exceptions or upstash_redis.UpstashError.
+        # Both are wrapped into a domain error so the auth middleware
+        # returns a clean 502 instead of a raw 500 with the httpx
+        # traceback in the body.
+        try:
+            raw: Any = await self._redis.get(f"token:hash:{_hash(secret)}")
+        except self._upstream_errors as e:
+            raise UpstreamUnavailableError(
+                "token store unreachable",
+                details={"cause": type(e).__name__},
+            ) from e
         if not raw:
             return None
         return _decode_record(raw)
 
     async def consume(self, token_id: str, day: date) -> RemainingQuota | Literal["exhausted"]:
         key = f"quota:{token_id}:{day.isoformat()}"
-        new_count = await self._redis.incr(key)
-        # 36h TTL on first write — safe even if INCR raced with another writer.
-        if new_count == 1:
-            await self._redis.expire(key, 36 * 60 * 60)
+        try:
+            new_count = await self._redis.incr(key)
+            # 36h TTL on first write — safe even if INCR raced with another writer.
+            if new_count == 1:
+                await self._redis.expire(key, 36 * 60 * 60)
 
-        index = await self._redis.get(f"token:id:{token_id}")
-        if not index:
-            return "exhausted"
-        record = _decode_record(await self._redis.get(f"token:hash:{index}"))
+            index = await self._redis.get(f"token:id:{token_id}")
+            if not index:
+                return "exhausted"
+            record = _decode_record(await self._redis.get(f"token:hash:{index}"))
+        except self._upstream_errors as e:
+            raise UpstreamUnavailableError(
+                "token store unreachable",
+                details={"cause": type(e).__name__, "token_id": token_id},
+            ) from e
         if record is None:
             return "exhausted"
 
