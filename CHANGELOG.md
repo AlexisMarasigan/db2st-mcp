@@ -9,6 +9,27 @@ land on `main` without a bump.
 
 ### Fixed
 
+- **CI security workflow was failing on B104** (`hardcoded_bind_all_interfaces`
+  on `cli.py`'s `--host 0.0.0.0` argparse default). Iter-79 had
+  removed `# nosec B104` based on bandit's then-behaviour of
+  reporting it as unused; the current bandit (1.9.4) flags it at
+  Medium severity, and CI's `--severity-level low` invocation
+  exits 1 on Medium. Restored the annotation alongside the
+  existing `# noqa: S104` (ruff). Caught locally by running the
+  exact CI command; would have failed on the next push.
+- ROADMAP Sprint 4 entry for "Public demo endpoint" said "Tracked
+  in Stretch" but the Stretch section never had that entry —
+  same cross-reference drift class as iter-89's upstream-table
+  fix. Added the entry with three concrete free-tier hosting
+  candidates (Fly.io, Railway/Render, GCP Cloud Run) and an
+  operational note on low-`daily_limit` token publication.
+- Dropped a dead `# nosec B105` annotation in `dependencies.py`'s
+  `_build_cache` that bandit reported as unused (same dead-nosec
+  class as iter-79's `cli.py` cleanup — but the iter-79 fix
+  itself turned out to be over-aggressive; see the B104 entry
+  above). Also moved the orphaned rationale comment from above
+  the function definition back inside the function body for
+  consistency with the analogous `build_deps` site.
 - **Playwright errors now map to `UpstreamUnavailableError`** instead
   of bubbling raw to the MCP wire response. Caught live this iter
   by trying a previously-unused sample ref: the SPA was slow, `Page.goto`
