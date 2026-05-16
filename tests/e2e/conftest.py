@@ -3,6 +3,8 @@
 - Collects per-test timing and outcome.
 - Writes a Markdown report at `docs/E2E-REPORT.md` mirroring the team's
   reference format (overview, summary, skipped table, slow-test table).
+- `terminate_cleanly` helper for the SIGTERM-then-SIGKILL pattern used
+  by every subprocess-based e2e test.
 
 The `--report` CLI flag is registered in the root `tests/conftest.py`
 so it is recognised regardless of which test path is passed.
@@ -10,6 +12,9 @@ so it is recognised regardless of which test path is passed.
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
+import signal
 import time
 from collections import defaultdict
 from datetime import UTC, datetime
@@ -17,6 +22,30 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+
+
+async def terminate_cleanly(
+    proc: asyncio.subprocess.Process,
+    *,
+    timeout: float = 5.0,
+) -> None:
+    """SIGTERM `proc`, wait up to `timeout`, SIGKILL on miss, assert clean.
+
+    Used in every subprocess-based e2e test. The assertion at the end
+    is what makes the SIGKILL fallback fail loud: after iter-130/131
+    the lifespan `finally` walks three `aclose()` calls, and a
+    deadlock anywhere in that chain would otherwise pass silently.
+    """
+    proc.send_signal(signal.SIGTERM)
+    clean_exit = False
+    try:
+        await asyncio.wait_for(proc.wait(), timeout=timeout)
+        clean_exit = True
+    except TimeoutError:
+        proc.kill()
+        with contextlib.suppress(Exception):
+            await proc.wait()
+    assert clean_exit, f"process did not honor SIGTERM within {timeout}s"
 
 REPORT_PATH = Path("docs/E2E-REPORT.md")
 SLOW_THRESHOLD_S = 10.0
