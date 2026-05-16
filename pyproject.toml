@@ -94,6 +94,7 @@ ignore = [
   "ANN401",   # allow Any in narrow places
   "PLR0913",  # arg count (Pydantic/FastAPI legitimately exceed)
   "PLR0911",  # return count (CLI dispatchers have many)
+  "PLR0912",  # branch count — script dispatch functions have many small branches
   "PLC0415",  # lazy/optional imports are intentional
   "S101",     # asserts allowed in tests
   "S105",     # token_store enum literal is a config value, not a secret
