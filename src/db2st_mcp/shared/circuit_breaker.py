@@ -11,7 +11,11 @@ from __future__ import annotations
 import time
 from typing import Literal
 
+import structlog
+
 State = Literal["closed", "open", "half_open"]
+
+_log = structlog.get_logger(__name__)
 
 
 class CircuitBreaker:
@@ -39,10 +43,19 @@ class CircuitBreaker:
         return self.state == "open"
 
     def record_success(self) -> None:
+        was_open = self._opened_at is not None
         self._failures = 0
         self._opened_at = None
+        if was_open:
+            _log.info("circuit_breaker.closed")
 
     def record_failure(self) -> None:
         self._failures += 1
         if self._failures >= self._failure_threshold and self._opened_at is None:
             self._opened_at = time.monotonic()
+            _log.warning(
+                "circuit_breaker.opened",
+                failures=self._failures,
+                threshold=self._failure_threshold,
+                cooldown_seconds=self._cooldown,
+            )

@@ -95,6 +95,20 @@ None.
 | Upstream payload shape change (detail endpoint returns non-dict, or parse raises) | `ParseError` | `parse_error` |
 | Reference format invalid (empty / whitespace-only / outside `[4..64]` chars) | `InvalidInputError` | `invalid_input` |
 
+## Observability
+
+Structured log events emitted by the orchestrator and its primitives:
+
+| Event | Level | When |
+|---|---|---|
+| `tracking.cache_hit` | info | `TrackingService` served the response from cache (memory or Upstash). |
+| `tracking.fallback_engaged` | warning | Primary upstream failed (breaker open or error); HTML fallback was invoked. Includes `reason`. |
+| `circuit_breaker.opened` | warning | Failure threshold hit. Includes `failures`, `threshold`, `cooldown_seconds`. The upstream is now short-circuited until cooldown. |
+| `circuit_breaker.closed` | info | Open → closed recovery: a successful request after the breaker had tripped. |
+
+Auth domain emits the parallel `auth.failure` / `auth.quota_exhausted`
+events — see [docs/AUTH.md](../../../../docs/AUTH.md) Observability.
+
 ## Tests
 
 - `tests/unit/domains/tracking/server/` — parser, parser helpers, client,
