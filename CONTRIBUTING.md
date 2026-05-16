@@ -106,6 +106,21 @@ Examples:
 5. Update the domain's `DOMAIN.md` Public-surface table and the
    `APP.md` composition diagram. `verify-docs` will complain
    otherwise.
+6. If the new tool's service emits structured log events (it
+   should, for any non-trivial state transition or notable failure
+   path), name them `<domain>.<verb>` (e.g., `tracking.cache_hit`,
+   `auth.failure`). Add a row to the domain's `DOMAIN.md`
+   **Observability** table — every event the tool can emit, its
+   level, and when it fires. See `tracking/DOMAIN.md` for the
+   shape. If the wire response is intentionally generic to avoid
+   a side channel (cf. `auth.failure`), say so in the table and
+   add a regression test that asserts the response stays generic.
+7. If the new tool's primitives own external resources (httpx
+   pools, file handles, etc.), add `aclose()` to the owning class
+   and chain it into `TrackingService.aclose()` (or the domain's
+   equivalent). `AppDeps.aclose()` already walks the orchestrator
+   via the `getattr(..., None)` pattern — see `apps/server/APP.md`
+   Shutdown for the chain.
 
 ## Releases
 
