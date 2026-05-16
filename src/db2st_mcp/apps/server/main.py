@@ -15,6 +15,7 @@ import structlog
 from fastapi import FastAPI
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from db2st_mcp import __version__ as _pkg_version
 from db2st_mcp.apps.server.dependencies import AppDeps, build_deps
 from db2st_mcp.apps.server.mcp_app import build_mcp_server
 from db2st_mcp.apps.server.middleware import request_id_middleware
@@ -48,8 +49,6 @@ def build_app() -> FastAPI:
             finally:
                 await deps.aclose()
                 _log.info("app.stopped")
-
-    from db2st_mcp import __version__ as _pkg_version
 
     app = FastAPI(title="db2st-mcp", version=_pkg_version, lifespan=lifespan)
     app.state.deps = deps
