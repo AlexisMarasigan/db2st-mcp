@@ -225,6 +225,56 @@ def check_decision_logs() -> list[Finding]:
     return findings
 
 
+# --- Broken in-repo references ----------------------------------------------
+
+
+import re  # noqa: E402
+
+# Match repo-relative paths in markdown code blocks or bare prose.
+# Conservative: only flags references that look like real files (have a
+# directory separator OR a known suffix) so prose phrases like "FastAPI"
+# don't trigger.
+_PATH_PATTERN = re.compile(
+    r"`(?P<path>(?:scripts|deploy|src|tests|docs|\.github)/[A-Za-z0-9_./-]+)`"
+)
+# Path segments that signal a documentation placeholder rather than a
+# real file. The check skips matches containing any of these tokens.
+_PLACEHOLDER_TOKENS = ("foo", "bar", "baz", "example", "your_", "placeholder")
+
+
+def check_inrepo_references_exist() -> list[Finding]:
+    """Catch broken `path/to/file` references inside docs.
+
+    Iteration 22 caught two real cases: `docs/KNATIVE.md` referenced
+    `deploy/knative-serving.yaml` and `scripts/local-cluster.sh`,
+    neither of which existed in the tree. Anyone copy-pasting would
+    have hit a hard error.
+    """
+    findings: list[Finding] = []
+    for doc in REPO.rglob("*.md"):
+        # Skip vendored / generated / templates.
+        if any(
+            part in {"node_modules", ".venv", ".git", "ISSUE_TEMPLATE"} for part in doc.parts
+        ):
+            continue
+        text = doc.read_text(encoding="utf-8")
+        for match in _PATH_PATTERN.finditer(text):
+            rel = match.group("path")
+            # Skip doc examples that use foo/bar/baz/etc placeholders.
+            if any(tok in rel for tok in _PLACEHOLDER_TOKENS):
+                continue
+            target = REPO / rel
+            if not target.exists():
+                findings.append(
+                    Finding(
+                        file=str(doc.relative_to(REPO)),
+                        severity="WARNING",
+                        message=f"references missing file `{rel}`",
+                    )
+                )
+    return findings
+
+
 # --- Runner ------------------------------------------------------------------
 
 
@@ -235,6 +285,7 @@ def run() -> int:
         + check_public_surface_documented()
         + check_doc_lengths()
         + check_decision_logs()
+        + check_inrepo_references_exist()
     )
 
     # Group by file

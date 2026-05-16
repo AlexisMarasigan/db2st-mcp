@@ -49,16 +49,19 @@ envs:
 
 ## Local dev cluster
 
-`kind` + Knative for end-to-end:
+`scripts/local-cluster.sh` wraps the full bootstrap:
 
 ```bash
-kind create cluster --name db2st
-kubectl apply -f https://github.com/knative/operator/releases/download/knative-v1.14.0/operator.yaml
-kubectl apply -f deploy/knative-serving.yaml
-func deploy --build --push=false
+./scripts/local-cluster.sh
 ```
 
-`scripts/local-cluster.sh` wraps this in sprint 3.
+It creates the `kind` cluster (idempotent), applies the Knative operator
+manifest, applies our minimal Serving CR (`deploy/knative-serving.yaml`),
+waits for the control plane to become Ready, and runs
+`func deploy --build --push=false` so the locally built image is loaded
+into the cluster without going through a registry.
+
+Required tools (script exits 2 if missing): `kind`, `kubectl`, `func`.
 
 ## Cold start hygiene
 
