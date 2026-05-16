@@ -1,21 +1,27 @@
-# Multi-stage build for Knative Functions when buildpacks are unavailable.
-# Targets a small image so cold starts stay under our budget.
+# Multi-stage build. Knative Functions normally builds via Cloud Native
+# Buildpacks (see deploy/func.yaml); this Dockerfile is the fallback for
+# `docker build` and CI smoke tests.
 
 FROM python:3.12-slim AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    UV_COMPILE_BYTECODE=1 \
-    UV_LINK_MODE=copy
+    PIP_NO_CACHE_DIR=1
 
-RUN pip install --no-cache-dir uv==0.5.4
+RUN pip install --no-cache-dir uv==0.8.18
 
-WORKDIR /app
-COPY pyproject.toml README.md ./
+WORKDIR /build
+COPY pyproject.toml uv.lock README.md ./
 COPY src ./src
-RUN uv sync --frozen --no-dev --no-install-project \
- && uv pip install --system .
+
+# Build a wheel of the project, then resolve runtime deps into a single
+# install prefix at /install. No venv, no editable installs — just a
+# clean tree we can COPY into the runtime image.
+RUN uv build --wheel --out-dir /wheels \
+ && uv export --frozen --no-dev --no-emit-project --format requirements-txt > /tmp/requirements.txt \
+ && pip install --no-cache-dir --prefix=/install -r /tmp/requirements.txt \
+ && pip install --no-cache-dir --prefix=/install --no-deps /wheels/db2st_mcp-*.whl
+
 
 FROM python:3.12-slim AS runtime
 
@@ -27,8 +33,7 @@ RUN useradd --create-home --uid 1001 app
 USER app
 WORKDIR /app
 
-COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
+COPY --from=builder /install /usr/local
 
 EXPOSE 8080
 CMD ["uvicorn", "db2st_mcp.apps.server.main:app", "--host", "0.0.0.0", "--port", "8080"]
