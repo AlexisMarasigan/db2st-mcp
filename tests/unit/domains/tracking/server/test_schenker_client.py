@@ -261,3 +261,47 @@ async def test_context_manager_closes_client() -> None:
         assert isinstance(c, SchenkerClient)
     # After exit, the inner httpx client should be closed.
     assert c._client.is_closed
+
+
+@pytest.mark.asyncio
+async def test_drift_detector_is_called_on_resolver_and_detail(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The schema-drift detector ships in `shared/drift.py` and was
+    listed in Sprint 4. Until iter 126 it had no production caller —
+    only its own unit tests. This pins the wiring: both upstream
+    fetch sites (resolver, detail) must invoke `drift_check` with
+    a stable endpoint identifier so a real upstream-payload shape
+    change shows up as `schema.drift` / `schema.first_seen` in logs.
+    """
+    from db2st_mcp.domains.tracking.server import schenker_client as sc_module
+
+    calls: list[tuple[str, object]] = []
+
+    def _spy(endpoint: str, payload: object) -> None:
+        calls.append((endpoint, payload))
+
+    monkeypatch.setattr(sc_module, "drift_check", _spy)
+
+    client = SchenkerClient(
+        client=httpx.AsyncClient(
+            base_url=API,
+            headers={"x-version": "4"},
+            follow_redirects=True,
+        )
+    )
+    with respx.mock(base_url=API) as mock:
+        mock.get("/app/tracking-public/").respond(200, html="<html/>")
+        mock.get("/nges-portal/api/public/tracking-public/shipments").respond(
+            200, json=[{"id": "1806203236", "type": "land_se"}]
+        )
+        mock.get(
+            "/nges-portal/api/public/tracking-public/shipments/land/se/1806203236"
+        ).respond(200, json={"id": "1806203236"})
+        await client.resolve("1806203236")
+        await client.fetch_detail("land_se", "1806203236")
+
+    endpoints = [endpoint for endpoint, _ in calls]
+    assert "resolver" in endpoints
+    assert "detail:land_se" in endpoints
+    await client.aclose()

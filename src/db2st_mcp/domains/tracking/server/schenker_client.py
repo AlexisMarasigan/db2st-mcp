@@ -18,6 +18,7 @@ import structlog
 
 from db2st_mcp.domains.tracking.shared.schemas import ShipmentType
 from db2st_mcp.shared.config import get_settings
+from db2st_mcp.shared.drift import check as drift_check
 from db2st_mcp.shared.errors import (
     NotFoundError,
     UpstreamUnavailableError,
@@ -104,6 +105,7 @@ class SchenkerClient:
             "/nges-portal/api/public/tracking-public/shipments",
             params={"query": reference},
         )
+        drift_check("resolver", payload)
         candidates = parse_resolver(payload)
         if not candidates:
             raise NotFoundError(f"no shipments for reference {reference}")
@@ -119,6 +121,10 @@ class SchenkerClient:
         payload = await self._get_json(
             f"/nges-portal/api/public/tracking-public{suffix}{upstream_id}"
         )
+        # Endpoint key uses the ShipmentType so drift dashboards split
+        # per shipment-mode -- a schema change in `land` shouldn't
+        # silently obscure a separate change in `ocean`.
+        drift_check(f"detail:{type_hint}", payload)
         if not isinstance(payload, dict):
             from db2st_mcp.shared.errors import ParseError
 

@@ -103,8 +103,11 @@ Structured log events emitted by the orchestrator and its primitives:
 |---|---|---|
 | `tracking.cache_hit` | info | `TrackingService` served the response from cache (memory or Upstash). |
 | `tracking.fallback_engaged` | warning | Primary upstream failed (breaker open or error); HTML fallback was invoked. Includes `reason`. |
+| `html_fallback.empty` | warning | The Playwright fallback scraped but returned no content. The tool maps this to `NotFoundError`; the log line surfaces it for ops. Includes `reference`. |
 | `circuit_breaker.opened` | warning | Failure threshold hit. Includes `failures`, `threshold`, `cooldown_seconds`. The upstream is now short-circuited until cooldown. |
 | `circuit_breaker.closed` | info | Open → closed recovery: a successful request after the breaker had tripped. |
+| `schema.first_seen` | info | A new `(endpoint, fingerprint)` pair recorded for the first time. Normal at boot. |
+| `schema.drift` | warning | A *previously-seen* endpoint returned a payload with a *new* top-level key-shape fingerprint. Strong signal that the upstream changed shape; the parser may start raising `ParseError`. Includes `endpoint` (`resolver` or `detail:<ShipmentType>`) and `fingerprint`. |
 
 Auth domain emits the parallel `auth.failure` / `auth.quota_exhausted`
 events — see [docs/AUTH.md](../../../../docs/AUTH.md) Observability.
