@@ -5,7 +5,7 @@ description = "Database-to-Structured-Tools MCP server. Horizontally scalable, a
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
-authors = [{ name = "Alexis", email = "alexismarasigan31@gmail.com" }]
+authors = [{ name = "Alexis Jhon Estacio Marasigan", email = "alexismarasigan31@gmail.com" }]
 keywords = ["mcp", "model-context-protocol", "knative", "shipment-tracking", "schenker"]
 classifiers = [
   "Development Status :: 4 - Beta",
