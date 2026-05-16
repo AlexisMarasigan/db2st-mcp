@@ -58,7 +58,7 @@ async def test_serve_boots_and_rejects_unauthenticated_mcp_call() -> None:
     proc = await asyncio.create_subprocess_exec(
         sys.executable,
         "-m",
-        "db2st_mcp.apps.server.cli",
+        "db2st_mcp",
         "serve",
         "--host",
         "127.0.0.1",

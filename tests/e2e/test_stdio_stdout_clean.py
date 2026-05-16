@@ -41,7 +41,7 @@ async def test_stdio_stdout_is_jsonrpc_only_at_default_log_level() -> None:
     proc = await asyncio.create_subprocess_exec(
         sys.executable,
         "-m",
-        "db2st_mcp.apps.server.cli",
+        "db2st_mcp",
         "stdio",
         stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,
