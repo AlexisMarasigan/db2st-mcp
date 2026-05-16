@@ -83,14 +83,10 @@ def test_route_exception_propagates_via_500(monkeypatch: pytest.MonkeyPatch) -> 
     can correlate by request_id.
     """
     from db2st_mcp.apps.server import middleware as rim_module
+    from tests.conftest import SpyLogger
 
-    calls: list[tuple[str, str]] = []
-
-    class _SpyLogger:
-        def exception(self, event: str, **_kw: object) -> None:
-            calls.append(("exception", event))
-
-    monkeypatch.setattr(rim_module, "_log", _SpyLogger())
+    spy = SpyLogger()
+    monkeypatch.setattr(rim_module, "_log", spy)
 
     async def boom(_request):  # type: ignore[no-untyped-def]
         msg = "synthetic explosion"
@@ -106,4 +102,5 @@ def test_route_exception_propagates_via_500(monkeypatch: pytest.MonkeyPatch) -> 
     # Without this assertion, removing the `_log.exception(...)` line
     # leaves the test green -- the original test only checked the 500
     # status, not that the exception was actually logged.
-    assert ("exception", "request.failed") in calls
+    events = [event for event, _ in spy.calls]
+    assert "request.failed" in events
