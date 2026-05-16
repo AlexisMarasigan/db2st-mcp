@@ -36,11 +36,17 @@ export const options = {
 
 export default function () {
   const ref = REFS[Math.floor(Math.random() * REFS.length)];
+  // 50/50 between the two registered MCP tools so the load profile
+  // matches a realistic mix of "full shipment" vs "events timeline only"
+  // callers. Both go through the same TrackingService orchestrator, so
+  // p95 should track upstream + cache + breaker behaviour either way.
+  const toolName =
+    Math.random() < 0.5 ? 'track_shipment' : 'track_shipment_events';
   const body = JSON.stringify({
     jsonrpc: '2.0',
     id: 1,
     method: 'tools/call',
-    params: { name: 'track_shipment', arguments: { reference: ref } },
+    params: { name: toolName, arguments: { reference: ref } },
   });
   const headers = {
     'Content-Type': 'application/json',
