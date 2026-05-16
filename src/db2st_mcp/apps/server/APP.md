@@ -15,10 +15,12 @@
 ```
 FastAPI app
 ├── middleware/
-│   └── auth_middleware  ← domains/auth/server/middleware.py
+│   ├── request_id_middleware  ← apps/server/middleware.py
+│   └── bearer_auth_middleware ← domains/auth/server/middleware.py
 ├── /mcp                  (Streamable HTTP transport)
 │   └── tools:
-│       └── track_shipment ← domains/tracking/server/tool.py
+│       ├── track_shipment        ← domains/tracking/server/tool.py
+│       └── track_shipment_events ← domains/tracking/server/tool.py
 └── /healthz              (liveness + token-store ping)
 ```
 
