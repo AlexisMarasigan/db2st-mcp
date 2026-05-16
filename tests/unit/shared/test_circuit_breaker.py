@@ -7,6 +7,7 @@ import time
 import pytest
 
 from db2st_mcp.shared.circuit_breaker import CircuitBreaker
+from tests.conftest import SpyLogger
 
 
 def test_starts_closed() -> None:
@@ -52,31 +53,18 @@ def test_record_success_closes_after_recovery() -> None:
     assert cb.state == "closed"
 
 
-class _SpyLogger:
-    """Captures structlog `info`/`warning` calls for assertions."""
-
-    def __init__(self) -> None:
-        self.calls: list[tuple[str, dict[str, object]]] = []
-
-    def info(self, event: str, **kw: object) -> None:
-        self.calls.append((event, kw))
-
-    def warning(self, event: str, **kw: object) -> None:
-        self.calls.append((event, kw))
-
-
 @pytest.fixture
-def spy_log(monkeypatch: pytest.MonkeyPatch) -> _SpyLogger:
+def spy_log(monkeypatch: pytest.MonkeyPatch) -> SpyLogger:
     """Replace the module's bound logger with a spy. monkeypatch
     auto-restores at test teardown — no manual try/finally needed."""
     import db2st_mcp.shared.circuit_breaker as cb_module
 
-    spy = _SpyLogger()
+    spy = SpyLogger()
     monkeypatch.setattr(cb_module, "_log", spy)
     return spy
 
 
-def test_opens_emits_warning_log(spy_log: _SpyLogger) -> None:
+def test_opens_emits_warning_log(spy_log: SpyLogger) -> None:
     """Ops dashboards need to see breaker-trip events. Pinned because
     a silent breaker is operationally invisible — first symptom would
     be elevated upstream_unavailable response rates with no trigger."""
@@ -92,7 +80,7 @@ def test_opens_emits_warning_log(spy_log: _SpyLogger) -> None:
     assert kw["cooldown_seconds"] == 10
 
 
-def test_closes_after_open_emits_info_log(spy_log: _SpyLogger) -> None:
+def test_closes_after_open_emits_info_log(spy_log: SpyLogger) -> None:
     """The closed → open trip is a warning. The open → closed
     recovery is operationally useful too — it signals the upstream
     recovered. Logged at info, not warning, since it's good news."""
