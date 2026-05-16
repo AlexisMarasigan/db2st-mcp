@@ -39,3 +39,9 @@ envs:
     value: "{{ secret:upstash-creds:url }}"
   - name: UPSTASH_REDIS_REST_TOKEN
     value: "{{ secret:upstash-creds:token }}"
+  # Replace with the public hostname(s) of this Knative Service. Without
+  # this, the MCP transport returns HTTP 421 for any external Host
+  # header (DNS-rebinding protection is on by default — see
+  # docs/KNATIVE.md). Comma-separated for multiple hostnames.
+  - name: MCP_ALLOWED_HOSTS
+    value: db2st-mcp.db2st.example.com
