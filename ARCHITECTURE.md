@@ -86,8 +86,8 @@ User preference. Python MCP SDK is mature, async ecosystem (httpx, asyncio) fits
 **2026-05-15: Clara philosophy.**
 Codebase organized as apps/domains/shared with nested docs. Optimizes AI comprehension and human navigation. Tradeoff: more directories upfront vs. ad-hoc structure.
 
-**2026-05-15: Streamable HTTP transport, stateless mode.**
-Required for horizontal scale. Rules out stdio. Rules out server-affinity sessions (would pin clients to pods).
+**2026-05-15: Streamable HTTP transport, stateless mode (for deployment).**
+Required for horizontal scale. Rules out server-affinity sessions (would pin clients to pods). The project also ships a `stdio` transport — that's the path local Claude Code installs use — but the deployed surface is HTTP-only.
 
 **2026-05-15: Knative Functions.**
 Concurrency-based autoscaling + scale-to-zero match MCP's bursty traffic profile. Alternative (Cloud Run, Fargate) reconsidered if Knative adds operational drag.
