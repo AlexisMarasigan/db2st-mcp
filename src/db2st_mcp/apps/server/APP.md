@@ -21,7 +21,7 @@ FastAPI app
 │   └── tools:
 │       ├── track_shipment        ← domains/tracking/server/tool.py
 │       └── track_shipment_events ← domains/tracking/server/tool.py
-└── /healthz              (liveness + token-store ping)
+└── /healthz              (pure liveness; returns `{"status": "ok"}`)
 ```
 
 ## Files
