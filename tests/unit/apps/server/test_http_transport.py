@@ -91,3 +91,40 @@ async def test_authenticated_request_passes_middleware_to_transport(
     # tests/e2e/test_mcp_stdio.py.
     assert response.status_code != 401
     assert response.status_code in {200, 202, 400, 421}
+
+
+def test_auth_disabled_via_env_skips_middleware(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`DB2ST_AUTH_DISABLED=1` removes the auth middleware entirely so
+    /mcp/ is reachable without a bearer. Used for local dev only — the
+    docstring on `_auth_disabled` warns about production use.
+    """
+    monkeypatch.setenv("DB2ST_AUTH_DISABLED", "1")
+    # Settings cache + a fresh app to pick up the env var.
+    from db2st_mcp.shared.config import get_settings
+
+    get_settings.cache_clear()
+    app = build_app()
+    try:
+        with TestClient(app) as client:
+            response = client.post(
+                "/mcp/",
+                json={
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "initialize",
+                    "params": {
+                        "protocolVersion": "2025-06-18",
+                        "capabilities": {"tools": {}},
+                        "clientInfo": {"name": "test", "version": "0.0.1"},
+                    },
+                },
+                headers={"accept": "application/json, text/event-stream"},
+            )
+        # No bearer + auth disabled → request reaches the transport. 421
+        # is the same Host-header rejection the authenticated test sees;
+        # the point is that a 401 means auth middleware is still active.
+        assert response.status_code != 401
+    finally:
+        get_settings.cache_clear()
