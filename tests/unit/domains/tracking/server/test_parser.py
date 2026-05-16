@@ -158,3 +158,65 @@ class TestParseDetail:
     def test_raises_parse_error_on_non_dict(self) -> None:
         with pytest.raises(ParseError):
             parse_detail("X", "land", "nope")  # type: ignore[arg-type]
+
+
+# --- defensive guards (nested malformed fields) ----------------------------
+
+
+class TestParseDetailDefensiveGuards:
+    """Pin the per-field defensive paths so an upstream schema drift (a
+    nested string where an object was expected, a scalar where a list
+    was expected) degrades to empty/None instead of crashing.
+
+    Each test exercises one of the 7 previously-uncovered guards in
+    `parser.py`.
+    """
+
+    def test_resolver_skips_non_dict_items(self) -> None:
+        # Line 98: items in the resolver list that aren't dicts get skipped.
+        items: list[object] = ["not a dict", {"id": "X", "type": "land"}, 42]
+        candidates = parse_resolver(items)  # type: ignore[arg-type]
+        assert candidates == [("land", "X")]
+
+    def test_sender_as_string_yields_empty_party(self) -> None:
+        # Line 160: a non-dict sender returns an empty Party (no name).
+        shipment = parse_detail("X", "land", {"sender": "not a dict"})
+        assert shipment.sender.name == ""
+
+    def test_address_as_string_yields_empty_address(self) -> None:
+        # Line 168: a non-dict address field returns an empty Address.
+        shipment = parse_detail(
+            "X", "land", {"sender": {"name": "S", "address": "not a dict"}}
+        )
+        assert shipment.sender.address.city is None
+        assert shipment.sender.address.country is None
+
+    def test_package_as_string_yields_default_package(self) -> None:
+        # Line 180: a non-dict package returns a PackageInfo with defaults.
+        shipment = parse_detail("X", "land", {"package": "not a dict"})
+        assert shipment.package.weight_kg is None
+        assert shipment.package.piece_count == 1
+
+    def test_dimensions_as_string_yields_default_dims(self) -> None:
+        # Line 184: a non-dict dimensions sub-field doesn't blow up.
+        shipment = parse_detail(
+            "X", "land", {"package": {"dimensions": "not a dict", "pieceCount": 3}}
+        )
+        assert shipment.package.length_cm is None
+        assert shipment.package.piece_count == 3
+
+    def test_events_as_scalar_yields_empty_history(self) -> None:
+        # Line 206: a non-list events field returns an empty history.
+        shipment = parse_detail("X", "land", {"events": "not a list"})
+        assert shipment.history == []
+
+    def test_event_entries_that_arent_dicts_are_skipped(self) -> None:
+        # Line 210: non-dict event entries get skipped.
+        events: list[object] = [
+            "not a dict",
+            42,
+            {"timestamp": "2026-05-15T10:00:00Z", "status": "OK"},
+        ]
+        shipment = parse_detail("X", "land", {"events": events})
+        assert len(shipment.history) == 1
+        assert shipment.history[0].status == "OK"
