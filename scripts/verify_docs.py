@@ -252,9 +252,7 @@ def check_inrepo_references_exist() -> list[Finding]:
     findings: list[Finding] = []
     for doc in REPO.rglob("*.md"):
         # Skip vendored / generated / templates.
-        if any(
-            part in {"node_modules", ".venv", ".git", "ISSUE_TEMPLATE"} for part in doc.parts
-        ):
+        if any(part in {"node_modules", ".venv", ".git", "ISSUE_TEMPLATE"} for part in doc.parts):
             continue
         text = doc.read_text(encoding="utf-8")
         for match in _PATH_PATTERN.finditer(text):

@@ -116,7 +116,7 @@ jobs:
           load: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - name: Smoke: container boots + /healthz returns 200
+      - name: "Smoke: container boots + /healthz returns 200"
         run: |
           # --rm ensures cleanup on re-run / cancelled job. Trap also
           # tears down the container on any exit path of this step.

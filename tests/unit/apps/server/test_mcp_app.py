@@ -34,9 +34,7 @@ async def test_track_shipment_tool_returns_serialised_shipment() -> None:
     stub = _StubService(expected)
     mcp = build_mcp_server(stub)  # type: ignore[arg-type]
 
-    result = await mcp.call_tool(
-        "track_shipment", arguments={"reference": "1806203236"}
-    )
+    result = await mcp.call_tool("track_shipment", arguments={"reference": "1806203236"})
 
     # FastMCP returns (content_blocks, structured_dict) for json_response.
     structured: Any
@@ -78,14 +76,10 @@ async def test_track_shipment_events_tool_returns_event_list() -> None:
     events = [
         TrackingEvent(at=datetime(2026, 5, 15, 10, tzinfo=UTC), status="DELIVERED"),
     ]
-    stub = _StubService(
-        Shipment(reference="1806203236", type="land_se", history=events)
-    )
+    stub = _StubService(Shipment(reference="1806203236", type="land_se", history=events))
     mcp = build_mcp_server(stub)  # type: ignore[arg-type]
 
-    result = await mcp.call_tool(
-        "track_shipment_events", arguments={"reference": "1806203236"}
-    )
+    result = await mcp.call_tool("track_shipment_events", arguments={"reference": "1806203236"})
 
     structured: Any
     if isinstance(result, tuple):

@@ -111,9 +111,9 @@ async def test_fetch_detail_dispatch_table(
     upstream_id = "X-REF"
     with respx.mock(base_url=API) as mock:
         mock.get("/app/tracking-public/").respond(200, html="<html/>")
-        route = mock.get(
-            f"/nges-portal/api/public/tracking-public{suffix}{upstream_id}"
-        ).respond(200, json=payload)
+        route = mock.get(f"/nges-portal/api/public/tracking-public{suffix}{upstream_id}").respond(
+            200, json=payload
+        )
         await client.fetch_detail(type_hint, upstream_id)  # type: ignore[arg-type]
     assert route.called
     await client.aclose()
@@ -131,9 +131,9 @@ async def test_fetch_detail_raises_parse_error_for_non_dict_payload(
 
     with respx.mock(base_url=API) as mock:
         mock.get("/app/tracking-public/").respond(200, html="<html/>")
-        mock.get(
-            "/nges-portal/api/public/tracking-public/shipments/land/se/X-REF"
-        ).respond(200, json=["not", "a", "dict"])
+        mock.get("/nges-portal/api/public/tracking-public/shipments/land/se/X-REF").respond(
+            200, json=["not", "a", "dict"]
+        )
         with pytest.raises(ParseError):
             await client.fetch_detail("land_se", "X-REF")
     await client.aclose()
@@ -183,9 +183,7 @@ async def test_xsrf_prime_failure_surfaces_as_upstream_unavailable(
     error, `_prime_xsrf` translates it into `UpstreamUnavailableError`.
     """
     with respx.mock(base_url=API) as mock:
-        mock.get("/app/tracking-public/").mock(
-            side_effect=httpx.ConnectError("connection refused")
-        )
+        mock.get("/app/tracking-public/").mock(side_effect=httpx.ConnectError("connection refused"))
         with pytest.raises(UpstreamUnavailableError):
             await client.resolve("X")
     await client.aclose()
