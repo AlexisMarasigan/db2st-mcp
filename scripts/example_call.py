@@ -93,6 +93,21 @@ async def run(reference: str) -> int:
             },
         )
         print(json.dumps(call, indent=2))
+
+        print(f"\n→ tools/call track_shipment_events(reference={reference!r})")
+        events_call = await _send(
+            proc,
+            {
+                "jsonrpc": "2.0",
+                "id": 4,
+                "method": "tools/call",
+                "params": {
+                    "name": "track_shipment_events",
+                    "arguments": {"reference": reference},
+                },
+            },
+        )
+        print(json.dumps(events_call, indent=2))
         return 0
     finally:
         proc.terminate()
