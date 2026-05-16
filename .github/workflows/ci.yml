@@ -116,7 +116,7 @@ jobs:
           load: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - name: "Smoke: container boots + /healthz returns 200"
+      - name: "Smoke: container boots, /healthz returns 200, [redis] extra installed"
         run: |
           # --rm ensures cleanup on re-run / cancelled job. Trap also
           # tears down the container on any exit path of this step.
@@ -127,12 +127,26 @@ jobs:
           trap 'docker logs db2st-ci 2>&1 || true; docker stop db2st-ci 2>/dev/null || true' EXIT
 
           # Wait up to 15s for the server to come up.
+          healthz_ok=0
           for _ in $(seq 1 30); do
             if curl -fsS http://localhost:18080/healthz > /tmp/healthz; then
               cat /tmp/healthz; echo
-              exit 0
+              healthz_ok=1
+              break
             fi
             sleep 0.5
           done
-          echo "container failed to come up"
-          exit 1
+          if [ "$healthz_ok" != "1" ]; then
+            echo "container failed to come up"
+            exit 1
+          fi
+
+          # Guard against iter-98's regression mode: deploy/func.yaml
+          # sets TOKEN_STORE=upstash + RESPONSE_CACHE_BACKEND=upstash,
+          # both of which import upstash_redis at runtime. If the
+          # Dockerfile ever drops `--extra redis` again, an
+          # authenticated request would fail with
+          # "upstash-redis not installed". /healthz alone does not
+          # exercise that path, so we assert the import directly.
+          docker exec db2st-ci python -c \
+            "from upstash_redis.asyncio import Redis; print('redis import ok')"
