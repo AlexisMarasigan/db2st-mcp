@@ -120,7 +120,9 @@ def _to_shipment(reference: str, data: dict[str, Any]) -> Shipment:
                     description=str(body)[:400],
                 )
             )
-        except Exception:  # pragma: no cover — never let cosmetic enrichment break
+        except Exception:  # pragma: no cover  # nosec B110  — intentional swallow
+            # Cosmetic enrichment (a stamped "scraped" event with the
+            # body text). Never let it break the fallback path.
             pass
 
     return Shipment(
