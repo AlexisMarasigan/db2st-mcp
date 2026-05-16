@@ -22,6 +22,7 @@ Checks (see .claude/skills/verify-docs/SKILL.md for the full spec):
 from __future__ import annotations
 
 import ast
+import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -227,8 +228,6 @@ def check_decision_logs() -> list[Finding]:
 
 # --- Broken in-repo references ----------------------------------------------
 
-
-import re  # noqa: E402
 
 # Match repo-relative paths in markdown code blocks or bare prose.
 # Conservative: only flags references that look like real files (have a
