@@ -47,6 +47,7 @@ async def terminate_cleanly(
             await proc.wait()
     assert clean_exit, f"process did not honor SIGTERM within {timeout}s"
 
+
 REPORT_PATH = Path("docs/E2E-REPORT.md")
 SLOW_THRESHOLD_S = 10.0
 
