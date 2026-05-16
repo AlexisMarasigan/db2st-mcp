@@ -21,6 +21,8 @@ import sys
 import httpx
 import pytest
 
+from tests.e2e.conftest import terminate_cleanly
+
 pytestmark = pytest.mark.e2e
 
 
@@ -100,8 +102,6 @@ async def test_custom_host_accepted_when_in_allowlist() -> None:
             f"(status={response.status_code}, body={response.text[:200]!r})"
         )
     finally:
-        from tests.e2e.conftest import terminate_cleanly
-
         await terminate_cleanly(proc)
 
 
@@ -148,6 +148,4 @@ async def test_unlisted_host_still_rejected() -> None:
 
         assert response.status_code == 421
     finally:
-        from tests.e2e.conftest import terminate_cleanly
-
         await terminate_cleanly(proc)
