@@ -7,6 +7,38 @@ land on `main` without a bump.
 
 ## [Unreleased]
 
+### Observability
+
+- **Structured log events on every auth-failure branch**
+  (`auth.failure` with `reason=header_missing_or_malformed` /
+  `token_unknown` / `token_revoked`). The wire response stays
+  generic (iter-109 side-channel fix); the log line carries the
+  distinction so ops dashboards can split 401s by cause without
+  reaching past the trust boundary. The revoked-token event also
+  logs `token_id` because that's actionable for an operator
+  investigating a stuck client.
+- **`auth.quota_exhausted` event on every 429** with `token_id`
+  and `plan`. Mirrors the 401 pattern at the next-rung-up: an SRE
+  seeing rising 429s can identify abusive callers immediately. The
+  `plan` field is included because free vs. pro quota patterns are
+  operationally distinct.
+- **`circuit_breaker.opened` / `circuit_breaker.closed`** events
+  fired only on state transitions (not on every healthy request,
+  which would drown ops). `opened` is `warning`-level with the
+  failure-count + threshold + cooldown captured inline; `closed`
+  is `info`-level (good news, signals upstream recovery).
+- Per-domain Observability sections in `docs/AUTH.md` and
+  `tracking/DOMAIN.md` catalogue every event name + its fields +
+  when it fires. `ARCHITECTURE.md` gained a top-level
+  Observability paragraph that names the `<domain>.<verb>` event
+  convention, states the contextvars contract (`request_id`
+  always; `token_id` + `plan` on authenticated requests), and
+  links to both per-domain inventories.
+- `auth/DOMAIN.md` Failure-modes table got a third column wiring
+  each cause to its log event, plus a paragraph noting the 401
+  response body is identical across all four branches by design
+  (iter-109) — the log line is the only place the cause shows up.
+
 ### Security
 
 - **Closed an auth-response side channel.** Three branches of
