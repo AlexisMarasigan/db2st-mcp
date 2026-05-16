@@ -47,7 +47,12 @@ db2st-mcp = "db2st_mcp.apps.server.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/AlexisMarasigan/db2st-mcp"
+Documentation = "https://github.com/AlexisMarasigan/db2st-mcp#readme"
+Source = "https://github.com/AlexisMarasigan/db2st-mcp"
+Changelog = "https://github.com/AlexisMarasigan/db2st-mcp/blob/main/CHANGELOG.md"
 Issues = "https://github.com/AlexisMarasigan/db2st-mcp/issues"
+"Bug reports" = "https://github.com/AlexisMarasigan/db2st-mcp/issues/new?template=bug_report.md"
+"Security" = "https://github.com/AlexisMarasigan/db2st-mcp/security/policy"
 
 [dependency-groups]
 dev = [
