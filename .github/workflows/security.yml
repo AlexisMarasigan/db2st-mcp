@@ -59,12 +59,23 @@ jobs:
   gitleaks:
     name: gitleaks (secrets)
     runs-on: ubuntu-latest
+    # Job-level permission grant: gitleaks-action posts a summary comment
+    # back to the PR when it finds something. Scoped here (not at the
+    # workflow level) so bandit / pip-audit / codeql don't inherit write
+    # access to PRs they have no business mutating.
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: gitleaks/gitleaks-action@v2
         env:
+          # gitleaks-action@v2 requires GITHUB_TOKEN to scan PRs since
+          # its breaking change (see action README). Without it the PR
+          # scan exits with the "GITHUB_TOKEN is now required" error.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
 
   codeql:

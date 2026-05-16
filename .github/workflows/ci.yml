@@ -10,6 +10,12 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Locked at the workflow level: the repository default is `read` (set
+# at Settings → Actions → Workflow permissions), but pinning it here
+# documents the intent and survives any future default change.
+permissions:
+  contents: read
+
 env:
   PYTHON_VERSION: "3.12"
 
