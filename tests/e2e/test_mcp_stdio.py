@@ -45,14 +45,14 @@ async def _notify(proc: asyncio.subprocess.Process, method: str) -> None:
 
 @pytest.fixture
 async def mcp_subprocess() -> AsyncIterator[asyncio.subprocess.Process]:
-    """Spawn `python -m db2st_mcp.apps.server.cli stdio` and yield it."""
+    """Spawn `python -m db2st_mcp stdio` and yield it."""
     env = os.environ.copy()
     env["TOKEN_STORE"] = "memory"
     env["LOG_LEVEL"] = "error"
     proc = await asyncio.create_subprocess_exec(
         sys.executable,
         "-m",
-        "db2st_mcp.apps.server.cli",
+        "db2st_mcp",
         "stdio",
         stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,

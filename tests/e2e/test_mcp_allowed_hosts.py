@@ -57,7 +57,7 @@ async def test_custom_host_accepted_when_in_allowlist() -> None:
     proc = await asyncio.create_subprocess_exec(
         sys.executable,
         "-m",
-        "db2st_mcp.apps.server.cli",
+        "db2st_mcp",
         "serve",
         "--host",
         "127.0.0.1",
@@ -127,7 +127,7 @@ async def test_unlisted_host_still_rejected() -> None:
     proc = await asyncio.create_subprocess_exec(
         sys.executable,
         "-m",
-        "db2st_mcp.apps.server.cli",
+        "db2st_mcp",
         "serve",
         "--host",
         "127.0.0.1",

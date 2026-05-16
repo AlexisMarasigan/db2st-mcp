@@ -12,7 +12,7 @@ import sys
 
 
 def test_python_dash_m_invocation_shows_help() -> None:
-    result = subprocess.run(  # noqa: S603 — controlled args, sys.executable
+    result = subprocess.run(
         [sys.executable, "-m", "db2st_mcp", "--help"],
         capture_output=True,
         text=True,

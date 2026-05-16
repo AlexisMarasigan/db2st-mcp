@@ -49,7 +49,7 @@ async def run(reference: str) -> int:
     proc = await asyncio.create_subprocess_exec(
         sys.executable,
         "-m",
-        "db2st_mcp.apps.server.cli",
+        "db2st_mcp",
         "stdio",
         stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,
