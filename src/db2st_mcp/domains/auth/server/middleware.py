@@ -61,6 +61,7 @@ async def authenticate(
         raise UnauthorizedError(_AUTH_FAILURE_MSG)
     outcome = await store.consume(record.id, datetime.now(UTC).date())
     if outcome == "exhausted":
+        _log.info("auth.quota_exhausted", token_id=record.id, plan=record.plan)
         raise QuotaExceededError("daily quota exceeded", details={"token_id": record.id})
     return AuthContext(token_id=record.id, plan=record.plan, remaining_today=int(outcome))
 
