@@ -7,6 +7,8 @@ description: Verify CLAUDE.md / ARCHITECTURE.md / APP.md / DOMAIN.md against the
 
 Walks every doc in the repo and compares it to the code. **Read-only** — emits a report; never modifies files.
 
+> Executable: [`scripts/verify_docs.py`](../../../scripts/verify_docs.py). CI runs it as the `verify-docs` job in `.github/workflows/ci.yml`. Locally: `uv run python scripts/verify_docs.py`.
+
 ## When to invoke
 
 - Pre-merge gate on every PR.
