@@ -50,7 +50,10 @@ Two MCP tools are registered:
 > Claude Code caches the MCP tool list per session. If you added this
 > MCP before both tools were registered, restart Claude Code (or
 > `claude mcp remove db2st-mcp -s user` and re-add) so the second
-> tool is exposed.
+> tool is exposed. The same applies after pulling new code: the
+> stdio subprocess holds whatever was on disk at `claude mcp add`
+> time, so source changes (bug fixes, new tools) don't propagate
+> until the next add.
 
 Want to see the raw JSON-RPC handshake + a `tools/call` exchange without
 involving Claude Code? Run the example client:
