@@ -55,6 +55,13 @@ land on `main` without a bump.
 
 ### Changed
 
+- README now warns that Claude Code caches the MCP tool list per
+  session — users who added the MCP before `track_shipment_events`
+  shipped need to restart Claude Code (or
+  `claude mcp remove && claude mcp add`) before the second tool
+  appears. Real papercut observed across this iteration's session;
+  not a server bug (the server registers both tools and
+  `scripts/example_call.py` proves it).
 - **README local-MCP Quickstart now enables the HTML fallback**
   (`-e DB2ST_HTML_FALLBACK=1` + `--extra fallback` +
   `playwright install chromium`). Without the fallback, new users
