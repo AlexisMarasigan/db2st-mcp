@@ -122,3 +122,92 @@ async def test_from_settings_requires_url_and_token(
     get_settings.cache_clear()
     with pytest.raises(Db2stError):
         UpstashTokenStore.from_settings(Settings())
+
+
+# --- defensive / error paths -----------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_consume_returns_exhausted_when_token_id_index_missing(
+    fake_redis: type[FakeAsyncRedis],
+) -> None:
+    """A token id that doesn't exist in the index -> exhausted instead of
+    crashing. Defensive path (line 69) — protects against a quota counter
+    written for a token that's since been deleted from the index.
+    """
+    store = _store(fake_redis)
+    outcome = await store.consume("unknown-token-id", date.today())
+    assert outcome == "exhausted"
+
+
+@pytest.mark.asyncio
+async def test_consume_returns_exhausted_when_record_decode_fails(
+    fake_redis: type[FakeAsyncRedis],
+) -> None:
+    """A corrupt token record (e.g. hand-edited / partial write) yields
+    `None` from `_decode_record`, which `consume` translates to
+    `"exhausted"` rather than crashing (line 72).
+    """
+    store = _store(fake_redis)
+    record, _ = await store.mint(plan="free", daily_limit=10)
+    # Corrupt the stored record so _decode_record returns None.
+    store._redis._kv[f"token:hash:{record.hash}"] = None
+    outcome = await store.consume(record.id, date.today())
+    assert outcome == "exhausted"
+
+
+@pytest.mark.asyncio
+async def test_revoke_unknown_token_id_is_noop(
+    fake_redis: type[FakeAsyncRedis],
+) -> None:
+    """Revoking a token id that doesn't exist must not crash (line 96)."""
+    store = _store(fake_redis)
+    await store.revoke("does-not-exist")  # no raise
+
+
+@pytest.mark.asyncio
+async def test_revoke_with_undecodable_record_is_noop(
+    fake_redis: type[FakeAsyncRedis],
+) -> None:
+    """If the stored record can't be decoded, revoke returns early without
+    writing a malformed record back (line 99).
+    """
+    store = _store(fake_redis)
+    record, _ = await store.mint(plan="free", daily_limit=10)
+    store._redis._kv[f"token:hash:{record.hash}"] = None
+    await store.revoke(record.id)  # no raise; nothing written back
+
+
+def test_decode_record_handles_all_payload_shapes() -> None:
+    """`_decode_record` accepts None, bytes, str, dict, and falls back to
+    `json.loads(str(...))` for anything else. Lines 125, 127, 130-132.
+    """
+    from db2st_mcp.domains.auth.server.upstash_store import _decode_record
+
+    # None → None
+    assert _decode_record(None) is None
+
+    # Build a sample dump
+    sample = TokenRecord(
+        id="01HXAMPLE0000000000000000",
+        hash="h" * 64,
+        plan="free",
+        daily_limit=10,
+        created_at=datetime.now(UTC),
+    )
+    payload_json = sample.model_dump_json()
+
+    # bytes → decoded as str → parsed
+    decoded_bytes = _decode_record(payload_json.encode("utf-8"))
+    assert decoded_bytes is not None
+    assert decoded_bytes.id == sample.id
+
+    # str → parsed directly
+    decoded_str = _decode_record(payload_json)
+    assert decoded_str is not None
+    assert decoded_str.id == sample.id
+
+    # dict → validated directly
+    decoded_dict = _decode_record(sample.model_dump(mode="json"))
+    assert decoded_dict is not None
+    assert decoded_dict.id == sample.id
