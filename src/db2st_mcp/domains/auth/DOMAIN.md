@@ -37,7 +37,9 @@ class TokenStore(Protocol):
 
 - Window: rolling UTC day (`YYYY-MM-DD`).
 - Key in Redis: `quota:{token_id}:{YYYY-MM-DD}` (TTL 36h).
-- Incremented **post-success** so failed upstream calls are free.
+- Atomic `INCR` happens **pre-handler**; failed upstream calls
+  therefore burn one quota unit. See [docs/AUTH.md](../../../../docs/AUTH.md)
+  for the trade-off discussion.
 
 ## Dependencies on other domains
 
