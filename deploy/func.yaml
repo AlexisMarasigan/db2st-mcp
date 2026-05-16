@@ -1,3 +1,13 @@
+# Knative Functions deployment manifest.
+#
+# Before running `func deploy`, replace `REPLACE_ME` below with your
+# container registry path. For GHCR it's typically your GitHub username
+# or org. Examples:
+#   registry: ghcr.io/alexismarasigan
+#   image:    ghcr.io/alexismarasigan/db2st-mcp:latest
+#
+# `func deploy` will fail with an "invalid registry" error if you leave
+# the placeholder in.
 specVersion: 0.36.0
 name: db2st-mcp
 runtime: python
