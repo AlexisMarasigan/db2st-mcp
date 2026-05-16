@@ -8,6 +8,7 @@ proxy was silently ignored. This test pins the plumbing.
 from __future__ import annotations
 
 from collections.abc import Iterator
+from urllib.parse import urlparse
 
 import pytest
 
@@ -27,7 +28,13 @@ def test_client_base_url_follows_env_var(monkeypatch: pytest.MonkeyPatch) -> Non
     from db2st_mcp.domains.tracking.server.schenker_client import SchenkerClient
 
     client = SchenkerClient()
-    assert str(client._client.base_url).startswith("https://fixture.example.invalid")
+    # Parse out the URL components instead of substring/prefix-matching the
+    # raw URL string — sidesteps the over-eager
+    # `py/incomplete-url-substring-sanitization` static-analysis flag and
+    # is more precise about *what* we're asserting on the test fixture.
+    parsed = urlparse(str(client._client.base_url))
+    assert parsed.scheme == "https"
+    assert parsed.hostname == "fixture.example.invalid"
 
 
 def test_client_defaults_to_mydsv_when_unset(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -35,4 +42,5 @@ def test_client_defaults_to_mydsv_when_unset(monkeypatch: pytest.MonkeyPatch) ->
     from db2st_mcp.domains.tracking.server.schenker_client import SchenkerClient
 
     client = SchenkerClient()
-    assert "mydsv.dsv.com" in str(client._client.base_url)
+    parsed = urlparse(str(client._client.base_url))
+    assert parsed.hostname == "mydsv.dsv.com"

@@ -1,0 +1,11 @@
+name: db2st-mcp CodeQL config
+
+# Test files aren't security boundaries: assertions like
+# `"host" in settings.allowed_hosts` (a list-membership check) and
+# `url.startswith("https://fixture.example.invalid")` (the correct
+# sanitization pattern on a test fixture URL) get over-flagged by
+# `py/incomplete-url-substring-sanitization`. Scanning test code
+# trades real signal for noise. Production code under `src/` and
+# operational scripts under `scripts/` stay in scope.
+paths-ignore:
+  - 'tests/**'
