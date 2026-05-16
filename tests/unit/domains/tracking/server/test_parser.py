@@ -185,9 +185,7 @@ class TestParseDetailDefensiveGuards:
 
     def test_address_as_string_yields_empty_address(self) -> None:
         # Line 168: a non-dict address field returns an empty Address.
-        shipment = parse_detail(
-            "X", "land", {"sender": {"name": "S", "address": "not a dict"}}
-        )
+        shipment = parse_detail("X", "land", {"sender": {"name": "S", "address": "not a dict"}})
         assert shipment.sender.address.city is None
         assert shipment.sender.address.country is None
 

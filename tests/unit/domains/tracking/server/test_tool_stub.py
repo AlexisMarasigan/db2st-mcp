@@ -59,9 +59,7 @@ async def test_events_returns_only_history() -> None:
         TrackingEvent(at=datetime(2026, 5, 12, 8, 15, tzinfo=UTC), status="PICKED_UP"),
         TrackingEvent(at=datetime(2026, 5, 15, 9, 5, tzinfo=UTC), status="DELIVERED"),
     ]
-    service = _FakeService(
-        Shipment(reference="1806203236", type="land_se", history=events)
-    )
+    service = _FakeService(Shipment(reference="1806203236", type="land_se", history=events))
     args = TrackShipmentEventsArgs(reference="1806203236")
     result = await track_shipment_events(args, service=service)  # type: ignore[arg-type]
     assert result == events

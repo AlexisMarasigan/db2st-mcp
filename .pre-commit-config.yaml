@@ -3,6 +3,13 @@ repos:
     rev: v5.0.0
     hooks:
       - id: check-yaml
+        args: [--allow-multiple-documents, --unsafe]
+        # --allow-multiple-documents: deploy/knative-serving.yaml is a
+        #   multi-doc manifest (Namespace + KnativeServing + Namespace).
+        # --unsafe: GitHub Actions YAML uses custom tags (`!!str`-style)
+        #   plus expressions like `${{ github.ref }}` that look like
+        #   YAML mapping keys at parse time. The unsafe loader does
+        #   structural validation only, which is what we want here.
       - id: check-toml
       - id: check-json
       - id: check-added-large-files

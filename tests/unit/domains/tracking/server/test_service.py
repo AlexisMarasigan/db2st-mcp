@@ -136,9 +136,7 @@ async def test_service_falls_back_when_breaker_open_and_fallback_configured() ->
     breaker.record_failure()  # force open
     assert breaker.open is True
 
-    fallback_shipment = Shipment(
-        reference="Z-REF", type="unknown", source="html_fallback"
-    )
+    fallback_shipment = Shipment(reference="Z-REF", type="unknown", source="html_fallback")
     fallback = _StubFallback(fallback_shipment)
     cache: TTLCache[Shipment] = TTLCache(maxsize=4, ttl_seconds=60)
     service = TrackingService(client, cache=cache, breaker=breaker, html_fallback=fallback)
