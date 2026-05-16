@@ -9,6 +9,12 @@ land on `main` without a bump.
 
 ### Added
 
+- **`track_shipment_events` MCP tool** (sprint 4 stretch from the
+  original brief). Lighter shape than `track_shipment`: returns just
+  the events timeline. Useful for poll-style clients that don't need
+  the sender / receiver / package envelope. Per-package event split
+  (one timeline per colli) is still in `Stretch` — needs observation
+  of the upstream's per-package JSON shape.
 - `twine check --strict` runs on wheel + sdist in both the `build`
   CI job and the release `build-and-release` job. Catches malformed
   long_description, classifiers, or Project-URLs before any release

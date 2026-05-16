@@ -9,8 +9,10 @@ Given a Schenker tracking reference, return structured shipment data:
 - Sender (name, address)
 - Receiver (name, address)
 - Package details (weight, dimensions, piece count, ...)
-- Tracking history (chronological events)
-- *(stretch)* per-package events
+- Tracking history (chronological events) — also exposed standalone
+  via the `track_shipment_events` tool for poll-style clients.
+- *(stretch)* per-package events (one timeline per colli) — pending
+  upstream-payload observation; see `docs/ROADMAP.md`.
 
 ## Public surface
 
@@ -19,7 +21,8 @@ Given a Schenker tracking reference, return structured shipment data:
 | `Shipment`, `Party`, `Address`, `PackageInfo`, `TrackingEvent`, `ShipmentType` | `shared/schemas.py` | Pydantic models (contract). |
 | `SchenkerClient.resolve(ref)`, `.fetch_detail(type, id)` | `server/schenker_client.py` | Two-step upstream fetch (resolver → detail). |
 | `TrackingService.get_shipment(ref)` | `server/service.py` | Orchestrator: cache → breaker → client → fallback. |
-| `track_shipment(args, service=...)` | `server/tool.py` | Async MCP tool handler. Registered by `apps/server`. |
+| `track_shipment(args, service=...)` | `server/tool.py` | Async MCP tool handler — returns the full `Shipment`. |
+| `track_shipment_events(args, service=...)` | `server/tool.py` | Async MCP tool handler — returns only the events timeline. |
 | `PlaywrightHtmlFallback` | `server/html_fallback.py` | Optional HTML scrape fallback (sprint 4). |
 
 Domain errors come from `db2st_mcp.shared.errors` (`NotFoundError`,

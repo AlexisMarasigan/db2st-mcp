@@ -29,6 +29,13 @@ claude mcp list | grep db2st-mcp   # should show: ✓ Connected
 
 Then ask Claude Code to track a shipment, e.g. `track DSV shipment 1806203236`.
 
+Two MCP tools are registered:
+
+| Tool | Returns |
+|---|---|
+| `track_shipment` | Full structured shipment (sender, receiver, package, history). |
+| `track_shipment_events` | Just the chronological events timeline — lighter for poll-style clients. |
+
 Want to see the raw JSON-RPC handshake + a `tools/call` exchange without
 involving Claude Code? Run the example client:
 
