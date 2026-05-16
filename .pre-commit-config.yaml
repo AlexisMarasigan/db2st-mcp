@@ -13,24 +13,16 @@ repos:
         args: [--fix=lf]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.7.4
+    rev: v0.15.13
     hooks:
       - id: ruff
         args: [--fix]
       - id: ruff-format
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.13.0
-    hooks:
-      - id: mypy
-        additional_dependencies:
-          - pydantic>=2.9.0
-          - pydantic-settings>=2.6.0
-          - fastapi>=0.115.0
-          - structlog>=24.4.0
-          - httpx>=0.27.0
-        args: [--strict]
-        files: ^(src|tests)/
+  # `mypy --strict` runs in CI (.github/workflows/ci.yml) where the full
+  # dependency set is installed. pre-commit's isolated env can't see the
+  # project's optional/test deps so a local hook would fight CI. Skipping
+  # in pre-commit is the pragmatic call.
 
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.21.2

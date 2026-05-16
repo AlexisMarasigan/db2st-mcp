@@ -26,7 +26,9 @@ import pytest
 pytestmark = pytest.mark.e2e
 
 
-async def _send(proc: asyncio.subprocess.Process, payload: dict[str, Any], timeout: float = 30.0) -> dict[str, Any]:
+async def _send(
+    proc: asyncio.subprocess.Process, payload: dict[str, Any], timeout: float = 30.0
+) -> dict[str, Any]:
     assert proc.stdin is not None
     assert proc.stdout is not None
     proc.stdin.write((json.dumps(payload) + "\n").encode())

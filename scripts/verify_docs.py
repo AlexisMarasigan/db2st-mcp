@@ -15,6 +15,8 @@ Checks (see .claude/skills/verify-docs/SKILL.md for the full spec):
 3. Decision Log section present in every committed doc.
 4. Cross-domain imports are documented in the importer's DOMAIN.md
    under "Dependencies on other domains".
+5. Symbols re-exported from each domain's `shared/__init__.py` and
+   `server/__init__.py` appear in the DOMAIN.md "Public surface" table.
 """
 
 from __future__ import annotations
@@ -111,6 +113,69 @@ def check_cross_domain_imports() -> list[Finding]:
     return findings
 
 
+# --- Public-surface coverage ------------------------------------------------
+
+
+def _exported_symbols(init_path: Path) -> list[str]:
+    """Read `__all__` from a package's __init__.py."""
+    if not init_path.is_file():
+        return []
+    try:
+        tree = ast.parse(init_path.read_text(encoding="utf-8"))
+    except SyntaxError:
+        return []
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, ast.Assign)
+            and len(node.targets) == 1
+            and isinstance(node.targets[0], ast.Name)
+            and node.targets[0].id == "__all__"
+            and isinstance(node.value, ast.List | ast.Tuple)
+        ):
+            return [
+                elt.value
+                for elt in node.value.elts
+                if isinstance(elt, ast.Constant) and isinstance(elt.value, str)
+            ]
+    return []
+
+
+def check_public_surface_documented() -> list[Finding]:
+    """Every symbol exported from a domain's `shared/__init__.py` or
+    `server/__init__.py` should be mentioned by name in its DOMAIN.md.
+
+    This is the check that would have caught the SchenkerClient.fetch vs
+    SchenkerClient.resolve drift in iteration 4.
+    """
+    findings: list[Finding] = []
+    domains_root = SRC / "domains"
+    if not domains_root.is_dir():
+        return findings
+
+    for domain_dir in domains_root.iterdir():
+        if not domain_dir.is_dir():
+            continue
+        domain_md = domain_dir / "DOMAIN.md"
+        if not domain_md.exists():
+            continue
+        doc_text = domain_md.read_text(encoding="utf-8")
+        for sub in ("shared", "server", "client"):
+            init = domain_dir / sub / "__init__.py"
+            for symbol in _exported_symbols(init):
+                if symbol not in doc_text:
+                    findings.append(
+                        Finding(
+                            file=str(domain_md.relative_to(REPO)),
+                            severity="WARNING",
+                            message=(
+                                f"symbol '{symbol}' is exported from "
+                                f"{init.relative_to(REPO)} but not mentioned in DOMAIN.md"
+                            ),
+                        )
+                    )
+    return findings
+
+
 # --- Length caps -------------------------------------------------------------
 
 
@@ -167,6 +232,7 @@ def run() -> int:
     findings = (
         check_shared_one_way()
         + check_cross_domain_imports()
+        + check_public_surface_documented()
         + check_doc_lengths()
         + check_decision_logs()
     )
