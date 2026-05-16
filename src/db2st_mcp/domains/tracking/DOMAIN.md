@@ -131,8 +131,18 @@ events — see [docs/AUTH.md](../../../../docs/AUTH.md) Observability.
 
 ## Decision Log
 
-**2026-05-16: Pydantic models are the contract.**
-Domain boundary contract lives in `shared/schemas.py`. The MCP tool schema is derived from the same models — single source of truth.
+**2026-05-16: Pydantic models for the domain boundary; function signatures for the wire schema.**
+The domain contract (`Shipment`, `Party`, `PackageInfo`, ...) lives in
+`shared/schemas.py`. FastMCP, however, derives the MCP tool's
+*inputSchema* from the registered function's parameter annotations
+(`reference: str`), not from the `TrackShipmentArgs` Pydantic
+model — so the wire JSON Schema sees `{reference: string}` without
+the `min_length=4 / max_length=64` constraints. The args Pydantic
+models are used inside the handler for internal validation (iter-171
+re-raises any `ValidationError` as a clean `InvalidInputError` so the
+client never sees Pydantic internals). The output side is closer to
+the original ideal: handlers return `Shipment.model_dump(mode="json")`
+so the response shape genuinely is the contract.
 
 **2026-05-16: Parser isolated from client.**
 A parser-only test suite lets us add upstream fixtures over time without rerunning network code, and surfaces schema drift fast.
