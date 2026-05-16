@@ -98,3 +98,14 @@ class UpstashCache(Generic[T]):
         # cache survives pod restarts up to the TTL. upstash-redis maps
         # the `ex=` kwarg to the SET ... EX <seconds> form.
         await self._redis.set(self._key(key), encoded, ex=self._ttl)
+
+    async def aclose(self) -> None:
+        """Close the underlying httpx connection pool.
+
+        upstash-redis wraps httpx; without an explicit close, the pool
+        stays open until GC. On graceful shutdown (SIGTERM) we want the
+        connections released cleanly.
+        """
+        close = getattr(self._redis, "close", None)
+        if close is not None:
+            await close()
