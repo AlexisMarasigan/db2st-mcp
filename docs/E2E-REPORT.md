@@ -2,7 +2,7 @@
 
 ## Overview
 
-All 9 tests ran in 0.1 minutes. 9 passed, 0 failed, 0 skipped. The suite is in excellent shape.
+All 9 tests ran in 0.2 minutes. 9 passed, 0 failed, 0 skipped. The suite is in excellent shape.
 
 ## Results Summary
 
