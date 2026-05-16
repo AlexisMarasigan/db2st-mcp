@@ -16,9 +16,13 @@ def configure_logging() -> None:
     settings = get_settings()
     level = getattr(logging, settings.log_level.upper())
 
+    # Always log to stderr. stdio MCP transport reserves stdout for
+    # JSON-RPC frames; ASGI workers (uvicorn) also log to stderr by
+    # convention. This keeps stdout consumable for tooling that pipes
+    # it (the `stdio` CLI subcommand, `scripts/example_call.py`, etc).
     logging.basicConfig(
         format="%(message)s",
-        stream=sys.stdout,
+        stream=sys.stderr,
         level=level,
     )
 
