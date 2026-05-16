@@ -64,7 +64,7 @@ class SchenkerClient:
         timeout_s = settings.schenker_timeout_ms / 1000.0
         self._owns_client = client is None
         self._client = client or httpx.AsyncClient(
-            base_url="https://mydsv.dsv.com",
+            base_url=str(settings.schenker_base_url).rstrip("/"),
             timeout=httpx.Timeout(timeout_s, connect=min(timeout_s, 3.0)),
             headers={
                 "user-agent": UA,

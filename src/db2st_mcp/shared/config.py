@@ -33,8 +33,10 @@ class Settings(BaseSettings):
     upstash_redis_rest_url: HttpUrl | None = None
     upstash_redis_rest_token: str | None = None
 
-    # Schenker upstream
-    schenker_base_url: HttpUrl = Field(default=HttpUrl("https://www.dbschenker.com"))
+    # DSV / Schenker upstream. `mydsv.dsv.com` is the post-acquisition home
+    # of the public tracking API; `www.dbschenker.com` 302-redirects here.
+    # Override in deployments behind a corporate proxy or test fixture.
+    schenker_base_url: HttpUrl = Field(default=HttpUrl("https://mydsv.dsv.com"))
     schenker_timeout_ms: int = 10_000
 
 
