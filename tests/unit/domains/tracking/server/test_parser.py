@@ -50,6 +50,15 @@ class TestParseResolver:
         with pytest.raises(ParseError):
             parse_resolver({"shipments": "nope"})
 
+    @pytest.mark.parametrize("payload", [None, 42, "string", 3.14, True])
+    def test_raises_parse_error_on_non_object_non_list(self, payload: object) -> None:
+        """Defensive guard: scalar/None payloads must surface as ParseError,
+        not AttributeError. Iter 32 caught `parse_resolver(None)` crashing
+        with `'NoneType' object has no attribute 'get'`.
+        """
+        with pytest.raises(ParseError):
+            parse_resolver(payload)  # type: ignore[arg-type]
+
 
 # --- detail -----------------------------------------------------------------
 

@@ -80,11 +80,15 @@ def parse_resolver(payload: JsonObj | list[JsonObj]) -> list[tuple[ShipmentType,
     Returns a list of `(type, id)` tuples. The first is the preferred
     detail endpoint; the rest are fallbacks if it 404s.
     """
-    items = (
-        payload
-        if isinstance(payload, list)
-        else payload.get("shipments", []) or payload.get("items", [])
-    )
+    if isinstance(payload, list):
+        items: list[JsonObj] | object = payload
+    elif isinstance(payload, dict):
+        items = payload.get("shipments", []) or payload.get("items", [])
+    else:
+        raise ParseError(
+            "resolver payload must be an object or list",
+            details={"got": type(payload).__name__},
+        )
     if not isinstance(items, list):
         raise ParseError("resolver payload not a list", details={"got": type(items).__name__})
 
