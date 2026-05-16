@@ -28,7 +28,7 @@ def _load_run() -> object:
     return module.run
 
 
-def test_example_call_prints_initialize_tools_list_and_call() -> None:
+def test_example_call_prints_initialize_tools_list_and_both_calls() -> None:
     run = _load_run()
     buf = io.StringIO()
     with redirect_stdout(buf):
@@ -37,5 +37,8 @@ def test_example_call_prints_initialize_tools_list_and_call() -> None:
     assert exit_code == 0
     assert "initialize" in out
     assert "tools/list" in out
+    # Both registered tools appear in the demo output.
     assert "track_shipment" in out
-    assert "tools/call" in out
+    assert "track_shipment_events" in out
+    # The demo invokes tools/call at least twice (once per tool).
+    assert out.count("tools/call") >= 2
