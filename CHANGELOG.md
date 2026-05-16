@@ -9,6 +9,17 @@ land on `main` without a bump.
 
 ### Fixed
 
+- **Project version is now single-sourced from `pyproject.toml`.**
+  The version string `"0.0.1"` was hardcoded in three places:
+  `pyproject.toml` (canonical), `src/db2st_mcp/__init__.py`
+  (`__version__`), and `apps/server/main.py:52` (the FastAPI
+  `version=` param that drives OpenAPI / docs). A release bump
+  would have needed three coordinated edits, with the `__init__.py`
+  one easily forgotten. `__init__.py` now reads via
+  `importlib.metadata.version("db2st-mcp")` with a `"0+unknown"`
+  fallback for pre-install source runs; `main.py` imports
+  `__version__` and passes it to FastAPI. Verified end-to-end:
+  both surfaces return the pyproject value automatically.
 - **Upstash errors on the auth hot path now map to
   `UpstreamUnavailableError`** instead of bubbling raw httpx /
   `UpstashError` exceptions through the middleware to a 500 with
