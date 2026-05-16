@@ -36,17 +36,19 @@ class AppDeps:
     async def aclose(self) -> None:
         """Release every dependency that owns external resources.
 
-        - SchenkerClient owns an httpx.AsyncClient.
-        - UpstashTokenStore / UpstashCache each wrap upstash-redis,
-          which keeps its own httpx pool. Both expose `aclose()` when
-          Upstash is the backend; the in-memory variants don't, so
-          guarded with `hasattr`.
+        - `SchenkerClient` owns an httpx.AsyncClient.
+        - `TrackingService.aclose` closes its cache backend
+          (`UpstashCache` wraps upstash-redis's httpx pool;
+          `TTLCache` is a no-op).
+        - `UpstashTokenStore` owns the same upstash-redis pool used
+          by the auth path. `InMemoryTokenStore` doesn't, so the
+          `getattr` guard makes the call a no-op there.
         """
         await self.schenker_client.aclose()
-        for dep in (self.token_store, self.tracking_service._cache):
-            aclose = getattr(dep, "aclose", None)
-            if aclose is not None:
-                await aclose()
+        await self.tracking_service.aclose()
+        aclose = getattr(self.token_store, "aclose", None)
+        if aclose is not None:
+            await aclose()
 
 
 def build_deps(settings: Settings) -> AppDeps:
