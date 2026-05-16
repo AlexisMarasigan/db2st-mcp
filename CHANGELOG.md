@@ -33,6 +33,57 @@ land on `main` without a bump.
 
 ### Fixed
 
+- **Doc-vs-code audit sweep** (iters 84–95). Twelve substantive
+  doc-vs-code drift bugs caught and corrected over a focused doc
+  audit pass, with no code changes:
+  - `docs/TESTING.md` undersold the suite ("~150 tests / ~87%
+    coverage" → actually 199 / 95.51%). Refreshed.
+  - `docs/AUTH.md`, `domains/auth/DOMAIN.md`, and `docs/ROADMAP.md`
+    Decision Log all claimed quota was incremented *post-success*
+    ("failed upstream calls don't burn budget"). The middleware
+    actually `INCR`s **pre-handler** — a 5xx still costs one quota
+    unit. Three copies of the same lie corrected; the canonical
+    trade-off discussion now lives in one place (AUTH.md Decision
+    Log) and the others link to it.
+  - `APP.md` Files table listed a non-existent `routes.py`, missed
+    `mcp_app.py` + `middleware.py`, and omitted `stdio` from the
+    CLI subcommand list. Fixed.
+  - `tracking/DOMAIN.md` Contracts block had drifted from
+    `shared/schemas.py`: `PackageInfo.dimensions_cm` (a tuple) had
+    long been replaced by separate `length_cm/width_cm/height_cm/
+    volume_m3`; `Shipment` was missing the `type` and `source`
+    fields that appear in the wire output; defaults were missing
+    throughout. Resynced.
+  - `docs/UPSTREAM.md` detail-endpoint table missed trailing
+    slashes on four entries (`land_se`, `dsv`, `atol`, `cos`),
+    listed an `air-ocean/search` endpoint the client never
+    dispatches to, and omitted the `unknown` fallback. Synced to
+    the actual `DETAIL_PATHS` map.
+  - `ARCHITECTURE.md` Shared section claimed `shared/` housed an
+    "HTTP client wrapper" (removed in iter 20) and omitted five
+    Sprint-3/4 modules (`cache.py`, `upstash_cache.py`,
+    `circuit_breaker.py`, `drift.py`, `observability.py`).
+    Re-enumerated.
+  - `CONTRIBUTING.md` "Adding a new tool" pointed at
+    `apps/server/main.py` for tool registration (actually
+    `mcp_app.py` since sprint 2) and `shared/schemas.py` for args
+    schemas (actually the domain's `server/tool.py`). Two real
+    lies a new contributor would have hit.
+  - `APP.md` Boot order missed `TrackingService` + cache backend
+    construction, collapsed middleware ordering into one line
+    (the LIFO order matters — `request_id` binds contextvars
+    before auth emits its first log line), and omitted
+    `instrument_app(app)` entirely.
+  - `APP.md` composition diagram described `/healthz` as
+    "liveness + token-store ping" but the handler is pure
+    liveness. Operationally meaningful — a Knative readiness
+    probe against `/healthz` would not catch Upstash outages.
+  - `tracking/DOMAIN.md` Error mapping table listed only "Upstream
+    timeout / 5xx" for `UpstreamUnavailableError`, hiding the
+    other four causes (429, other 4xx, connection errors, non-JSON
+    body). Re-enumerated.
+  - `docs/E2E-REPORT.md` duration figure was stale (0.1 → 0.2 min).
+    Regenerated via the same `--report` flow CI uses.
 - ROADMAP Sprint 3/4 had several `[x]` marks that overstated what
   shipped: cluster deploy, autoscaler tuning, and load-test execution
   (Sprint 3) all ship as scripts/manifests but were never executed
