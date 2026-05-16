@@ -103,6 +103,21 @@ land on `main` without a bump.
     just that the 500 status surfaces — without the assertion,
     removing the `_log.exception(...)` call would have left the
     test green.
+- **E2E subprocess-cleanup consolidation** (iters 135–138). The
+  four subprocess-based e2e tests each had a
+  `SIGTERM → wait_for → SIGKILL` cleanup, with the SIGKILL fallback
+  *silent* — a deadlock in the iter-130/131 `aclose` chain would
+  have passed the test under SIGKILL. Extracted
+  `terminate_cleanly(proc, timeout=...)` into
+  `tests/e2e/conftest.py` with an explicit clean-exit assertion.
+  All four test files now share it; six dead imports
+  (`contextlib`, `signal`) removed across the refactored files.
+- CONTRIBUTING.md "Adding a new tool" checklist gained two new
+  steps: (6) emit `<domain>.<verb>` log events + add a DOMAIN.md
+  Observability row, and (7) declare `aclose()` on primitives
+  that own external resources + chain into the orchestrator's
+  `aclose()`. Captures the conventions iters 111–114 + 130–132
+  established.
 
 ### Security
 
