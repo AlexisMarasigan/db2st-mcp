@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 import pytest
 from starlette.applications import Starlette
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -108,6 +110,39 @@ def test_auth_failure_logs_distinguish_cause(monkeypatch: pytest.MonkeyPatch) ->
     reasons = {kw.get("reason") for event, kw in calls if event == "auth.failure"}
     assert "header_missing_or_malformed" in reasons
     assert "token_unknown" in reasons
+
+
+@pytest.mark.asyncio
+async def test_quota_exhaustion_emits_log_with_token_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Same observability pattern as `auth.failure` but for 429s.
+    Ops dashboards split 429-by-token to spot abusive callers; the
+    log line carries the token_id so the dashboard query is cheap.
+    """
+    from db2st_mcp.domains.auth.server import middleware as mw
+
+    calls: list[tuple[str, dict[str, object]]] = []
+
+    class _SpyLogger:
+        def info(self, event: str, **kw: object) -> None:
+            calls.append((event, kw))
+
+    monkeypatch.setattr(mw, "_log", _SpyLogger())
+
+    store = InMemoryTokenStore()
+    record, secret = await store.mint(plan="free", daily_limit=1)
+    # Burn the only allowed unit.
+    await store.consume(record.id, datetime.now(UTC).date())
+
+    client = TestClient(_app(store))
+    response = client.get("/protected", headers={"Authorization": f"Bearer {secret}"})
+    assert response.status_code == 429
+
+    quota_events = [kw for event, kw in calls if event == "auth.quota_exhausted"]
+    assert len(quota_events) == 1
+    assert quota_events[0]["token_id"] == record.id
+    assert quota_events[0]["plan"] == "free"
 
 
 @pytest.mark.asyncio

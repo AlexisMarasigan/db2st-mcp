@@ -67,10 +67,12 @@ line never leaves the trust boundary.
 | `auth.failure` | `reason="header_missing_or_malformed"` | No `Authorization` header, or prefix not `bearer ` (case-insensitive). |
 | `auth.failure` | `reason="token_unknown"` | Header well-formed, hash not in the store. |
 | `auth.failure` | `reason="token_revoked"`, `token_id` | Header well-formed, hash in store, `revoked_at` set. `token_id` is logged because it's actionable context for the operator investigating a stuck client. |
+| `auth.quota_exhausted` | `token_id`, `plan` | Authenticated request rejected because today's quota counter exceeded `daily_limit`. The 429 response also carries `token_id` in `details`. |
 
-Group dashboards by `reason` to distinguish bot scanning
+Group 401 dashboards by `reason` to distinguish bot scanning
 (`header_missing_or_malformed` dominates) from expired/revoked
-customer tokens (`token_unknown` / `token_revoked` dominate).
+customer tokens (`token_unknown` / `token_revoked` dominate). Group
+429 dashboards by `token_id` to spot abusive callers.
 
 ## Out of scope (v1)
 
