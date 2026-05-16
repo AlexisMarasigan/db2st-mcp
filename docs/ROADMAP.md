@@ -73,7 +73,16 @@ validation are deferred until a cluster host is available**.
         cache entry survives pod churn up to the TTL. Uses the same
         Upstash credentials as `token_store=upstash` but is opt-in
         independently.
-- [x] Schema-drift detector for upstream payload (`shared/drift.py`).
+- [x] Schema-drift detector for upstream payload (`shared/drift.py`),
+      wired into both `SchenkerClient.resolve()`
+      (`drift_check("resolver", payload)`) and `fetch_detail()`
+      (`drift_check(f"detail:{type_hint}", payload)`). Emits
+      `schema.first_seen` on every new `(endpoint, fingerprint)`
+      pair and `schema.drift` on subsequent shape changes for an
+      already-seen endpoint. The iter-78 audit unchecked this box
+      because the module shipped without a caller — iter-126
+      restored the `[x]` by adding the call sites and pinning the
+      wiring with an integration test.
 - [ ] Public demo endpoint with free-tier token. Deferred — needs a
       hosting environment to deploy into. Tracked in Stretch.
 - [x] Stretch tool: `track_shipment_events` — ships as a
