@@ -17,8 +17,16 @@ COPY src ./src
 # Build a wheel of the project, then resolve runtime deps into a single
 # install prefix at /install. No venv, no editable installs — just a
 # clean tree we can COPY into the runtime image.
+#
+# The `--extra redis` is load-bearing for the default production
+# manifest (deploy/func.yaml sets TOKEN_STORE=upstash and
+# RESPONSE_CACHE_BACKEND=upstash; both import upstash-redis at
+# runtime). Without it, the first authenticated request fails with
+# "upstash-redis not installed". The `[fallback]` (Playwright) and
+# `[otel]` extras stay opt-in because they bloat the image
+# substantially and aren't needed for the default deployment.
 RUN uv build --wheel --out-dir /wheels \
- && uv export --frozen --no-dev --no-emit-project --format requirements-txt > /tmp/requirements.txt \
+ && uv export --frozen --no-dev --no-emit-project --extra redis --format requirements-txt > /tmp/requirements.txt \
  && pip install --no-cache-dir --prefix=/install -r /tmp/requirements.txt \
  && pip install --no-cache-dir --prefix=/install --no-deps /wheels/db2st_mcp-*.whl
 
