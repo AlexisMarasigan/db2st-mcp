@@ -104,6 +104,7 @@ Structured log events emitted by the orchestrator and its primitives:
 | `tracking.cache_hit` | info | `TrackingService` served the response from cache (memory or Upstash). |
 | `tracking.fallback_engaged` | warning | Primary upstream failed (breaker open or error); HTML fallback was invoked. Includes `reason`. |
 | `html_fallback.empty` | warning | The Playwright fallback scraped but returned no content. The tool maps this to `NotFoundError`; the log line surfaces it for ops. Includes `reference`. |
+| `html_fallback.playwright_error` | warning | Playwright itself errored (e.g., `Page.goto: Timeout 30000ms exceeded`, navigation crash). The tool maps it to `UpstreamUnavailableError` so the wire response stays in the project taxonomy and the breaker counts it as an upstream failure. Includes `reference` and `exc` (the Playwright exception class name). |
 | `circuit_breaker.opened` | warning | Failure threshold hit. Includes `failures`, `threshold`, `cooldown_seconds`. The upstream is now short-circuited until cooldown. |
 | `circuit_breaker.closed` | info | Open → closed recovery: a successful request after the breaker had tripped. |
 | `schema.first_seen` | info | A new `(endpoint, fingerprint)` pair recorded for the first time. Normal at boot. |
