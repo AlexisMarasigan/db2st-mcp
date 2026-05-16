@@ -26,12 +26,17 @@ jobs:
       - name: Run E2E (writes docs/E2E-REPORT.md)
         run: uv run pytest tests/e2e -m e2e --report --no-cov
       - name: Upload report
+        # `if: always()` ensures the report is uploaded even when the
+        # pytest step fails — that's precisely the case where the
+        # report is most useful for debugging.
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: e2e-report
           path: docs/E2E-REPORT.md
+          if-no-files-found: warn
       - name: Comment PR with E2E summary
-        if: github.event_name == 'pull_request'
+        if: always() && github.event_name == 'pull_request'
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           path: docs/E2E-REPORT.md
