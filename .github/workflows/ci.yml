@@ -113,17 +113,21 @@ jobs:
           cache-to: type=gha,mode=max
       - name: Smoke: container boots + /healthz returns 200
         run: |
-          docker run -d --name db2st-ci -e DB2ST_AUTH_DISABLED=1 -p 18080:8080 db2st-mcp:ci
+          # --rm ensures cleanup on re-run / cancelled job. Trap also
+          # tears down the container on any exit path of this step.
+          docker run -d --rm --name db2st-ci \
+            -e DB2ST_AUTH_DISABLED=1 \
+            -p 18080:8080 \
+            db2st-mcp:ci
+          trap 'docker logs db2st-ci 2>&1 || true; docker stop db2st-ci 2>/dev/null || true' EXIT
+
           # Wait up to 15s for the server to come up.
-          for i in $(seq 1 30); do
+          for _ in $(seq 1 30); do
             if curl -fsS http://localhost:18080/healthz > /tmp/healthz; then
               cat /tmp/healthz; echo
-              docker logs db2st-ci
-              docker stop db2st-ci
               exit 0
             fi
             sleep 0.5
           done
           echo "container failed to come up"
-          docker logs db2st-ci
           exit 1
