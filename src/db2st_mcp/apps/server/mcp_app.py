@@ -32,9 +32,7 @@ def _transport_security() -> TransportSecuritySettings | None:
     [::1] with any port). Returning a populated settings object widens the
     allowed-hosts list to include the operator's production hostnames.
     """
-    extra = [
-        h.strip() for h in get_settings().mcp_allowed_hosts.split(",") if h.strip()
-    ]
+    extra = [h.strip() for h in get_settings().mcp_allowed_hosts.split(",") if h.strip()]
     if not extra:
         return None
     return TransportSecuritySettings(

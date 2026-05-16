@@ -66,15 +66,15 @@ def _cmd_stdio() -> int:
     settings = get_settings()
     deps = build_deps(settings)
     mcp = build_mcp_server(deps.tracking_service)
-    try:
-        mcp.run(transport="stdio")
-        return 0
-    finally:
+
+    async def _run() -> None:
         try:
-            asyncio.run(deps.aclose())
-        except RuntimeError:
-            # Event loop already closed by mcp.run — best-effort cleanup.
-            pass
+            await mcp.run_stdio_async()
+        finally:
+            await deps.aclose()
+
+    asyncio.run(_run())
+    return 0
 
 
 def _cmd_mint(args: argparse.Namespace) -> int:

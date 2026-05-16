@@ -19,9 +19,7 @@ import pytest
 pytestmark = pytest.mark.e2e
 
 
-async def _drain_stdout(
-    proc: asyncio.subprocess.Process, *, deadline: float
-) -> list[bytes]:
+async def _drain_stdout(proc: asyncio.subprocess.Process, *, deadline: float) -> list[bytes]:
     assert proc.stdout is not None
     lines: list[bytes] = []
     while True:
@@ -85,9 +83,7 @@ async def test_stdio_stdout_is_jsonrpc_only_at_default_log_level() -> None:
                 msg = json.loads(text)
             except json.JSONDecodeError as e:
                 pytest.fail(f"stdout line is not JSON-RPC: {text!r} ({e})")
-            assert msg.get("jsonrpc") == "2.0", (
-                f"stdout line is not a JSON-RPC frame: {text!r}"
-            )
+            assert msg.get("jsonrpc") == "2.0", f"stdout line is not a JSON-RPC frame: {text!r}"
     finally:
         proc.terminate()
         try:
