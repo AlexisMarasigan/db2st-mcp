@@ -73,3 +73,24 @@ def test_request_id_does_not_touch_token_id(app: Starlette) -> None:
         response = client.get("/echo")
     ctx = response.json()["context"]
     assert "token_id" not in ctx
+
+
+def test_route_exception_propagates_via_500() -> None:
+    """A route exception travels through the middleware's
+    `except Exception: _log.exception; raise` branch. The exception
+    propagates to Starlette's exception middleware (HTTP 500); the
+    contextvars stay bound so the captured log line carries request_id
+    + path.
+    """
+
+    async def boom(_request):  # type: ignore[no-untyped-def]
+        msg = "synthetic explosion"
+        raise RuntimeError(msg)
+
+    app = Starlette(routes=[Route("/boom", boom)])
+    app.add_middleware(BaseHTTPMiddleware, dispatch=request_id_middleware)
+
+    with TestClient(app, raise_server_exceptions=False) as client:
+        response = client.get("/boom")
+
+    assert response.status_code == 500
