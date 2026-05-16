@@ -43,8 +43,12 @@ envs:
 
 ## Autoscaling notes
 
-- **Concurrency target 50** — tool calls are I/O-bound on Schenker. Tune from real p95 in sprint 3.
-- **min=0** — scale to zero for cost. Python cold start target: <2s.
+- **Concurrency target 50** — tool calls are I/O-bound on Schenker. This
+  is a *reasoned default*, not the result of a load test: real tuning
+  is deferred until a cluster host runs `scripts/loadtest.k6.js`
+  against a deployed revision (see `docs/ROADMAP.md` Sprint 3).
+- **min=0** — scale to zero for cost. Python cold start target: <2s
+  (unverified; needs cluster execution to measure).
 - **max=20** — safety ceiling. Raising it means investigating abuse first.
 
 ## Local dev cluster
@@ -83,3 +87,11 @@ MCP tool calls vary widely in upstream latency. Concurrency tracks real saturati
 
 **2026-05-15: `kind` for local dev.**
 Local Kubernetes is cheap insurance against "works on my laptop, breaks on Knative" — and lets us load-test autoscaler tuning without paying for a cluster.
+
+**2026-05-16: Cluster execution + load-driven tuning deferred.**
+The bootstrap script, Serving CR, k6 script, and autoscaler annotations
+all ship in-tree. Actually running them against `kind` requires a host
+with `kind`/`kubectl`/`func` installed; this dev box doesn't have those.
+Capturing the gap here (and in `docs/ROADMAP.md`) so a future iteration
+from a cluster-ready box can pick up the work without re-deriving what
+landed vs. what's still TODO.
