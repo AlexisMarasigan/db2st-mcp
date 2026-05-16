@@ -35,8 +35,8 @@ htmlcov/
 
 # Generated artifacts (E2E-REPORT.md is intentionally committed as
 # the sprint deliverable; CI overwrites it on each nightly run).
+# `dist/` is already covered under "Python" above.
 requirements.txt
-dist/
 
 # Knative / Docker buildpack scratch
 .func/
