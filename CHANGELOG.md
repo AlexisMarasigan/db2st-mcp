@@ -30,9 +30,39 @@ land on `main` without a bump.
   only). The three production-adjacent helper scripts that ship in the
   sdist — `verify_docs.py`, `sync_domain.py`, `example_call.py` — are
   now part of the strict-typecheck surface (84 source files, was 81).
+- Dropped 4 dead dev deps (`vcrpy`, `hypothesis`, `pytest-httpx`,
+  `types-requests`) — none imported anywhere in `src/`, `tests/`, or
+  `scripts/`. Cuts dev install footprint, lock-file size,
+  pip-audit surface, and Dependabot churn for zero loss.
+- Added `playwright.*` to the existing `[[tool.mypy.overrides]]`
+  with `ignore_missing_imports = true`, alongside `upstash_redis.*`
+  and `opentelemetry.*`. Plugs a latent failure mode where mypy
+  strict would reject `html_fallback.py`'s import-inside-try guard
+  on any dev box that hadn't transitively pulled Playwright.
+- CONTRIBUTING.md Setup now has an "Optional extras" subsection
+  documenting the `redis` / `fallback` / `otel` extras with their
+  trigger condition and exact install command. `uv sync --group dev`
+  deliberately doesn't pull `[project.optional-dependencies]`; the
+  doc table tells devs when they need to.
 
 ### Fixed
 
+- **Deployment-breaking gap: `deploy/Dockerfile` didn't install the
+  `[redis]` extra**, even though `deploy/func.yaml` defaults to
+  `TOKEN_STORE=upstash` + `RESPONSE_CACHE_BACKEND=upstash` (both
+  import `upstash_redis.asyncio` at runtime). A pod started from
+  this image with the manifest unchanged would crash on the first
+  authenticated request with `Db2stError: upstash-redis not
+  installed`. Latent since the iter-14 Dockerfile rewrite. Fix is
+  one flag: `uv export ... --extra redis`. The `[fallback]` and
+  `[otel]` extras stay opt-in.
+- **CI smoke gap that let the Dockerfile regression happen**: the
+  Docker job only hit `/healthz` with `DB2ST_AUTH_DISABLED=1` — a
+  path that never imports `upstash_redis`, so the missing `[redis]`
+  extra was invisible to every CI run. Added a `docker exec ...
+  python -c "from upstash_redis.asyncio import Redis"` inside the
+  same smoke step. If the Dockerfile ever drops `--extra redis`
+  again, CI catches it before the image lands anywhere.
 - **Doc-vs-code audit sweep** (iters 84–95). Twelve substantive
   doc-vs-code drift bugs caught and corrected over a focused doc
   audit pass, with no code changes:
