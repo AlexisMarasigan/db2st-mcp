@@ -37,7 +37,7 @@ jobs:
           if-no-files-found: warn
       - name: Comment PR with E2E summary
         if: always() && github.event_name == 'pull_request'
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@v3
         with:
           path: docs/E2E-REPORT.md
 
