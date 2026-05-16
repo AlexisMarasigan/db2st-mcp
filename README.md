@@ -19,13 +19,24 @@ uv run pytest tests/e2e --report # E2E + Markdown report
 
 ```bash
 # from the repo root
-uv sync --group dev
-claude mcp add db2st-mcp -s user -e TOKEN_STORE=memory \
+uv sync --group dev --extra fallback   # extra installs Playwright
+uv run playwright install chromium     # download the browser driver
+claude mcp add db2st-mcp -s user \
+  -e TOKEN_STORE=memory \
+  -e DB2ST_HTML_FALLBACK=1 \
   -- uv --directory "$(pwd)" run db2st-mcp stdio
 
 # verify
 claude mcp list | grep db2st-mcp   # should show: ✓ Connected
 ```
+
+`DB2ST_HTML_FALLBACK=1` enables the Playwright-based SPA scrape that
+takes over when the upstream JSON path is rate-limited — which it
+usually is from a fresh egress IP. Without the fallback, expect
+`shipment not found` on most first-call attempts. The `[fallback]`
+extra is what installs Playwright; see
+[CONTRIBUTING.md](CONTRIBUTING.md#optional-extras-projectoptional-dependencies)
+for the full list of optional extras.
 
 Then ask Claude Code to track a shipment, e.g. `track DSV shipment 1806203236`.
 
