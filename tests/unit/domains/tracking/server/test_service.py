@@ -152,3 +152,40 @@ async def test_service_falls_back_when_breaker_open_and_fallback_configured() ->
     assert fallback.calls == ["Z-REF"]  # still one call
 
     await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_aclose_delegates_to_cache_when_present() -> None:
+    """`TrackingService.aclose()` must propagate to the cache backend
+    so `UpstashCache` releases its upstash-redis httpx pool on
+    graceful shutdown. Pins the delegation so a future refactor
+    can't silently leave the cache pool open."""
+    client = _make_client()
+
+    class _SpyCache:
+        def __init__(self) -> None:
+            self.aclose_called = False
+
+        async def get(self, key: str) -> Shipment | None:
+            return None
+
+        async def set(self, key: str, value: Shipment) -> None:
+            return None
+
+        async def aclose(self) -> None:
+            self.aclose_called = True
+
+    cache = _SpyCache()
+    service = TrackingService(client, cache=cache)
+    await service.aclose()
+    assert cache.aclose_called is True
+    await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_aclose_is_safe_when_no_cache_configured() -> None:
+    """`_cache=None` is a valid config; `aclose()` must not raise."""
+    client = _make_client()
+    service = TrackingService(client)
+    await service.aclose()  # must not raise
+    await client.aclose()

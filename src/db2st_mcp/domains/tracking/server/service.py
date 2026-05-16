@@ -59,6 +59,18 @@ class TrackingService:
         self._breaker = breaker
         self._fallback = html_fallback
 
+    async def aclose(self) -> None:
+        """Release resources owned by the orchestrator's primitives.
+
+        Today only the cache backend may own external connections
+        (`UpstashCache` wraps upstash-redis's httpx pool). `TTLCache`
+        is in-memory and has no cleanup; both cases handled via
+        `getattr(..., None)`.
+        """
+        aclose = getattr(self._cache, "aclose", None)
+        if aclose is not None:
+            await aclose()
+
     async def get_shipment(self, reference: str) -> Shipment:
         ref = reference.strip()
         if self._cache is not None:
