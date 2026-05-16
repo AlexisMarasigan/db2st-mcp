@@ -1,20 +1,9 @@
 """tracking domain — shared contracts (schemas, errors).
 
-Importable from client/server code. Has no dependency on tracking internals.
+Consumers import directly from the submodule, e.g.:
+
+    from db2st_mcp.domains.tracking.shared.schemas import Shipment
+
+No package-level re-exports — keeps the contract surface in one place
+(`schemas.py`) and avoids drift when new symbols are added.
 """
-
-from db2st_mcp.domains.tracking.shared.schemas import (
-    Address,
-    PackageInfo,
-    Party,
-    Shipment,
-    TrackingEvent,
-)
-
-__all__ = [
-    "Address",
-    "PackageInfo",
-    "Party",
-    "Shipment",
-    "TrackingEvent",
-]
