@@ -98,7 +98,7 @@ XSRF cookies are minted by a `GET` to the SPA root.
 |---|---|
 | Schema drift on any detail endpoint | Schema-drift detector (sprint 4, wired iter-126) fingerprints the upstream payload's top-level key shape per endpoint. Emits `schema.first_seen` on every new `(endpoint, fingerprint)` pair and `schema.drift` (warning) on subsequent shape changes for an already-seen endpoint. Observational only — the detector doesn't gate the request; if the new shape breaks the parser, `ParseError` is raised from `parser.py` independently. |
 | Bundle URL constants change | Capture constants at runtime by fetching `runtime.*.js` + `main.*.js`; cache constants in `shared/config`. (Sprint 4 stretch.) |
-| Aggressive rate limits per IP | Circuit breaker (sprint 4); response cache (60s TTL); pluggable egress for rotating IPs. |
+| Aggressive rate limits per IP | Circuit breaker around `SchenkerClient` (sprint 4), response cache with 60s TTL (memory or KV-backed since iter-80), and the HTML-fallback path that engages when the JSON endpoint 429s. Pluggable egress for rotating IPs is *not* implemented today; tracked informally as a future hardening item if the static-IP rate limit becomes a recurring pain. |
 | ToS / robots posture | Public, unauthenticated tracking is the SPA's documented use. Our request rate must stay below the SPA's normal load. |
 
 ## Decision Log
