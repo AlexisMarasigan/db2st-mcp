@@ -44,10 +44,12 @@ uv run db2st-mcp serve
 # 2. mint a token (one-time, secret is shown once)
 uv run db2st-mcp mint --plan pro --limit 10000
 
-# 3. call the MCP transport at /mcp with the bearer token
+# 3. call the MCP transport at /mcp with the bearer token.
+#    Streamable HTTP requires the Accept header to list both types.
 curl https://your-host/mcp/ \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"track_shipment","arguments":{"reference":"1806203236"}}}'
 ```
 
