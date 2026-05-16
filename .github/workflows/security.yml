@@ -35,8 +35,14 @@ jobs:
           enable-cache: true
       - run: uv python install 3.12
       - run: uv sync --frozen --group dev
-      - name: Export requirements
-        run: uv export --frozen --no-dev --format requirements-txt > requirements.txt
+      - name: Export requirements (deps only, drop editable + comments)
+        # `uv export` emits the project itself as `-e .` plus comment lines
+        # that `pip-audit` choke on. Strip both so we only audit external
+        # dependencies (the project's own code is covered by bandit /
+        # CodeQL elsewhere).
+        run: |
+          uv export --frozen --no-dev --format requirements-txt \
+            | grep -v '^-e\|^# ' > requirements.txt
       - name: pip-audit
         uses: pypa/gh-action-pip-audit@v1.0.8
         with:
