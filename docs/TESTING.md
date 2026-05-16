@@ -4,7 +4,7 @@
 
 ```
 tests/
-├── unit/         # Fast, isolated, ~150 tests. Mirrors src/ layout.
+├── unit/         # Fast, isolated, ~200 tests. Mirrors src/ layout.
 ├── integration/  # Hits live DSV upstream. Deselected by default.
 └── e2e/          # Real-process tests (db2st-mcp stdio / serve subprocesses).
 ```
@@ -28,7 +28,7 @@ uv run pytest -m integration
 ## Coverage
 
 Gate is 80% on the unit suite (`addopts: --cov-fail-under=80`). Current
-coverage is ~87%. The `--cov*` flags are baked into `addopts`; you can
+coverage is ~95%. The `--cov*` flags are baked into `addopts`; you can
 opt out for a faster run with `--no-cov` on the command line.
 
 ## `pytest -W error` mode
