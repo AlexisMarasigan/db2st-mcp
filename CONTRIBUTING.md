@@ -39,6 +39,11 @@ clear `Db2stError("<lib> not installed; reinstall with the [<extra>] extra")`.
    uv run mypy
    uv run pytest
    uv run python scripts/verify_docs.py
+   # Mirror CI's bandit invocation -- catches B104/B105/etc.
+   # findings the unit-test gate won't surface. Iter-158 caught
+   # a real CI break this exact command would have flagged locally.
+   uv run --with bandit bandit -r src/ scripts/ \
+     --severity-level low --confidence-level low
    ```
 
    Or — one command that runs every pre-commit hook against the whole
@@ -50,7 +55,9 @@ clear `Db2stError("<lib> not installed; reinstall with the [<extra>] extra")`.
 
    On macOS without local Go installed, the `gitleaks` hook can't build.
    Skip it explicitly: `SKIP=gitleaks uv run pre-commit run --all-files`.
-   CI runs gitleaks unconditionally.
+   CI runs gitleaks unconditionally. Note: pre-commit does NOT run
+   bandit; the explicit invocation above is the only local mirror of
+   the security workflow.
 6. **Open a PR.** CI will run lint, typecheck, tests on py3.12 + py3.13, E2E (writes `docs/E2E-REPORT.md`), and security scans.
 
 ## Commit messages
