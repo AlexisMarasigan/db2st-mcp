@@ -104,8 +104,13 @@ hosting target is chosen.
 **2026-05-15: Investigate JSON endpoint before scraping HTML.**
 Schenker's tracking UI is a SPA — almost certainly backed by a JSON API. Scraping HTML is brittle and slow. Only fall back if no stable JSON exists.
 
-**2026-05-15: Quota incremented post-success.**
-Failed upstream calls don't burn quota. Trade-off accepted (we control upstream) — revisit if upstream cost becomes material.
+**2026-05-15: Quota consumed pre-handler.**
+Atomic Redis `INCR` is the only race-free option without a multi-step
+compare-and-set. Failed upstream calls therefore burn one quota unit;
+the alternative (decrement-on-success) needs a refund mechanism that
+survives a crashed pod, which is more complexity than the dev box can
+justify today. Revisit if upstream cost becomes material — see
+`bearer_auth_middleware` for the implementation note.
 
 **2026-05-16: Sprints 1–4 completed in one iteration.**
 Ralph loop drove the implementation. Sprint 1 ships the JSON path; sprint 4
