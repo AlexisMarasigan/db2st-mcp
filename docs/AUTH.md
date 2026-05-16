@@ -51,7 +51,7 @@ Quota key: `quota:{token_id}:{YYYY-MM-DD}`. `INCR` returns new value; > limit �
 |---|---|
 | Stolen token | Per-token quota caps blast radius; revoke + rotate. |
 | Replay | Reads are idempotent; replay only burns quota. |
-| Brute force | 32-byte secrets (~10^77 keyspace); rate-limited 401. |
+| Brute force | 32-byte secrets (2^256 keyspace ≈ 10^77). No per-IP 401 rate limit today — the keyspace alone makes guessing infeasible; an IP-level rate limit is reasonable defense-in-depth and tracked as a future hardening item. |
 | Header smuggling | Reject malformed `Authorization` early. |
 | Error-message side channel | Generic 401 for "missing or invalid". |
 
