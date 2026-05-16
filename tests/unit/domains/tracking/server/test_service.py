@@ -213,9 +213,9 @@ async def test_cache_get_failure_degrades_to_miss(monkeypatch: pytest.MonkeyPatc
         mock.get("/nges-portal/api/public/tracking-public/shipments").respond(
             200, json=[{"id": "X-REF", "type": "land_se"}]
         )
-        mock.get(
-            "/nges-portal/api/public/tracking-public/shipments/land/se/X-REF"
-        ).respond(200, json={"sender": {"name": "S"}, "receiver": {"name": "R"}})
+        mock.get("/nges-portal/api/public/tracking-public/shipments/land/se/X-REF").respond(
+            200, json={"sender": {"name": "S"}, "receiver": {"name": "R"}}
+        )
         shipment = await service.get_shipment("X-REF")
 
     assert shipment.reference == "X-REF"
@@ -243,9 +243,9 @@ async def test_cache_set_failure_does_not_propagate() -> None:
         mock.get("/nges-portal/api/public/tracking-public/shipments").respond(
             200, json=[{"id": "X-REF", "type": "land_se"}]
         )
-        mock.get(
-            "/nges-portal/api/public/tracking-public/shipments/land/se/X-REF"
-        ).respond(200, json={"sender": {"name": "S"}, "receiver": {"name": "R"}})
+        mock.get("/nges-portal/api/public/tracking-public/shipments/land/se/X-REF").respond(
+            200, json={"sender": {"name": "S"}, "receiver": {"name": "R"}}
+        )
         shipment = await service.get_shipment("X-REF")
 
     # Request succeeded despite the set() failure.
