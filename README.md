@@ -28,6 +28,13 @@ claude mcp list | grep db2st-mcp   # should show: ✓ Connected
 
 Then ask Claude Code to track a shipment, e.g. `track DSV shipment 1806203236`.
 
+Want to see the raw JSON-RPC handshake + a `tools/call` exchange without
+involving Claude Code? Run the example client:
+
+```bash
+uv run python scripts/example_call.py 1806203236
+```
+
 ## Use as a deployed MCP (HTTP + auth)
 
 ```bash

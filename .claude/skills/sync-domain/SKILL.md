@@ -7,6 +7,8 @@ description: Scan a domain's code, propose updates to its DOMAIN.md as a diff. N
 
 Propose a `DOMAIN.md` update for a given domain by comparing the current doc to the code in that domain. Output is always a **diff proposal** — never a direct write.
 
+> Executable: [`scripts/sync_domain.py`](../../../scripts/sync_domain.py). Locally: `uv run python scripts/sync_domain.py <name>` or `--all`.
+
 ## When to invoke
 
 - After a non-trivial change to `src/db2st_mcp/domains/<name>/`.
