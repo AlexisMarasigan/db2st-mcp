@@ -61,6 +61,24 @@ def test_invalid_token_returns_401() -> None:
     assert response.status_code == 401
 
 
+def test_auth_failure_message_is_identical_for_missing_and_invalid() -> None:
+    """Pins the no-error-message-side-channel invariant from
+    docs/AUTH.md threat model: an attacker enumerating tokens
+    must not be able to tell 'no header' from 'wrong token' by
+    reading the response body."""
+    store = InMemoryTokenStore()
+    client = TestClient(_app(store))
+
+    missing = client.get("/protected").json()
+    wrong = client.get("/protected", headers={"Authorization": "Bearer nope"}).json()
+    revoked_marker = client.get(
+        "/protected", headers={"Authorization": "Bearer "}
+    ).json()  # empty token: extract succeeds, lookup fails
+
+    assert missing["error"] == wrong["error"] == revoked_marker["error"] == "unauthorized"
+    assert missing["message"] == wrong["message"] == revoked_marker["message"]
+
+
 @pytest.mark.asyncio
 async def test_authenticate_returns_auth_context(monkeypatch) -> None:  # type: ignore[no-untyped-def]
     store = InMemoryTokenStore()

@@ -53,7 +53,7 @@ Quota key: `quota:{token_id}:{YYYY-MM-DD}`. `INCR` returns new value; > limit �
 | Replay | Reads are idempotent; replay only burns quota. |
 | Brute force | 32-byte secrets (2^256 keyspace ≈ 10^77). No per-IP 401 rate limit today — the keyspace alone makes guessing infeasible; an IP-level rate limit is reasonable defense-in-depth and tracked as a future hardening item. |
 | Header smuggling | Reject malformed `Authorization` early. |
-| Error-message side channel | Generic 401 for "missing or invalid". |
+| Error-message side channel | Every auth-failure branch (missing header, wrong token, revoked token) returns the same `error: "unauthorized"` and the identical `message: "missing or invalid bearer token"`. Pinned by `test_auth_failure_message_is_identical_for_missing_and_invalid`. |
 
 ## Out of scope (v1)
 

@@ -20,11 +20,17 @@ from starlette.responses import JSONResponse, Response
 from db2st_mcp.domains.auth.shared import AuthContext, TokenStore
 from db2st_mcp.shared.errors import QuotaExceededError, UnauthorizedError
 
+# Single generic message for every auth-failure branch so the response
+# body does not leak whether the header was absent vs. the token was
+# wrong vs. the token was revoked. See docs/AUTH.md threat model
+# (Error-message side channel row).
+_AUTH_FAILURE_MSG = "missing or invalid bearer token"
+
 
 def _extract_bearer(request: Request) -> str:
     header = request.headers.get("authorization")
     if not header or not header.lower().startswith("bearer "):
-        raise UnauthorizedError("missing bearer token")
+        raise UnauthorizedError(_AUTH_FAILURE_MSG)
     return header[len("Bearer ") :].strip()
 
 
@@ -41,7 +47,7 @@ async def authenticate(
     secret = _extract_bearer(request)
     record = await store.lookup(secret)
     if record is None or record.revoked_at is not None:
-        raise UnauthorizedError("invalid token")
+        raise UnauthorizedError(_AUTH_FAILURE_MSG)
     outcome = await store.consume(record.id, datetime.now(UTC).date())
     if outcome == "exhausted":
         raise QuotaExceededError("daily quota exceeded", details={"token_id": record.id})
