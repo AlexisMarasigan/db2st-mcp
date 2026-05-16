@@ -15,6 +15,17 @@ land on `main` without a bump.
   the sender / receiver / package envelope. Per-package event split
   (one timeline per colli) is still in `Stretch` — needs observation
   of the upstream's per-package JSON shape.
+- Surfaced the new tool across every user-facing doc: DOMAIN.md
+  Public surface table, README's "Use as a local Claude Code MCP"
+  table, README's deployed-MCP curl example (with a second `# 3b.`
+  for the events tool), APP.md's composition diagram, CHANGELOG,
+  decision-log entry in tracking/DOMAIN.md explaining why we
+  shipped shipment-level instead of speculating per-package, and
+  `scripts/example_call.py` (the demo now invokes both tools).
+- Test coverage further pushed to **95.45%**:
+  - `tool.py` 81.82% → 100% (whitespace-only reference guard).
+  - `service.py` 75% → 87.5% (NotFoundError resets breaker;
+    fallback engaged when breaker open + cache populated).
 - `twine check --strict` runs on wheel + sdist in both the `build`
   CI job and the release `build-and-release` job. Catches malformed
   long_description, classifiers, or Project-URLs before any release
