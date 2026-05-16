@@ -9,6 +9,20 @@ land on `main` without a bump.
 
 ### Added
 
+- `python -m db2st_mcp` invocation works alongside the `db2st-mcp`
+  console script (new `__main__.py` re-exports `cli.main`). Pinned
+  by a subprocess test. E2E tests + demo script now use the
+  canonical shorter form.
+- E2E live-subprocess test for `track_shipment_events` (full
+  `tools/call` round-trip), plus the `tools/list` test now asserts
+  both tools appear.
+- `__init__.py` markers in every test directory under `tests/unit/`
+  so pytest discovers each test as a fully-qualified package
+  member. Prevents future basename collisions across domains.
+- `pre-commit run --all-files` documented in CONTRIBUTING workflow
+  as the one-shot alternative to per-file hooks.
+- ROADMAP Decision Log entry capturing the iter-55/56 stretch-tool
+  history (briefly mis-marked done → unchecked → actually shipped).
 - **`track_shipment_events` MCP tool** (sprint 4 stretch from the
   original brief). Lighter shape than `track_shipment`: returns just
   the events timeline. Useful for poll-style clients that don't need
@@ -161,6 +175,15 @@ land on `main` without a bump.
 
 ### Fixed
 
+- Pre-commit `check-yaml` hook silently rejected the project tree:
+  - `deploy/knative-serving.yaml` is a multi-doc manifest;
+    `check-yaml`'s default loader couldn't parse it. Fixed with
+    `--allow-multiple-documents`.
+  - `.github/workflows/ci.yml` had `name: Smoke: container boots
+    + /healthz returns 200` — unquoted second `:` confused the
+    strict loader. Quoted the value; added `--unsafe` for GHA's
+    custom tags / `${{ … }}` expressions.
+  - 6 test files had drifted from `ruff format` style. Reformatted.
 - Sdist was packaging `.claude/ralph-loop.local.md` — local-only
   ephemeral state. Hatchling's default sdist includes any file not
   explicitly gitignored; the file's pattern wasn't covered. Added
