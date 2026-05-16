@@ -51,12 +51,26 @@ Phased plan. Each sprint ends with a runnable, demonstrable artifact.
 - [x] Response cache (60s TTL keyed on ref, KV-backed)
 - [x] Schema-drift detector for upstream payload
 - [x] Public demo endpoint with free-tier token
-- [x] Stretch tool: `track_shipment_events` (per-package events)
+- [ ] Stretch tool: `track_shipment_events` (per-package events). Deferred —
+      see the Stretch section below.
 
 **Exit:** demo endpoint live; one-command `curl` example in README.
 
 ## Stretch
 
+- **`track_shipment_events` tool** — exposes per-package events
+  separately from the shipment-level history. The current `Shipment`
+  schema has `package: PackageInfo` (a single aggregate) and
+  `history: list[TrackingEvent]` (per-shipment timeline). Per-package
+  events need:
+  - `Shipment.packages: list[Package]` (multi-colli model)
+  - A `Package.events: list[TrackingEvent]` per-package timeline
+  - A parser branch that maps the upstream's per-package event arrays
+    into the new shape
+  Implementing requires observing the upstream's per-package JSON
+  shape (the dev machine is currently rate-limited; do this from a
+  clean egress IP). Speculating a schema without that observation
+  would be guessing — left unchecked until a real payload is in hand.
 - Second carrier domain (PostNord) to prove the package-per-domain model.
 - mTLS / OAuth client credentials beside bearer tokens.
 - Multi-region Knative deployment with latency-based routing.
