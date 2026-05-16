@@ -156,3 +156,110 @@ async def test_xsrf_token_is_forwarded_as_header(client: SchenkerClient) -> None
     sent = api_route.calls.last.request
     assert sent.headers.get("x-xsrf-token") == "secret-xsrf"
     await client.aclose()
+
+
+# --- error paths -----------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_resolve_empty_list_raises_not_found(client: SchenkerClient) -> None:
+    """200 OK with an empty shipments list should surface as NotFoundError
+    (line 109 of schenker_client.py). The resolver returning [] means
+    DSV has no record of the reference.
+    """
+    with respx.mock(base_url=API) as mock:
+        mock.get("/app/tracking-public/").respond(200, html="<html/>")
+        mock.get("/nges-portal/api/public/tracking-public/shipments").respond(200, json=[])
+        with pytest.raises(NotFoundError):
+            await client.resolve("0000000000")
+    await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_xsrf_prime_failure_surfaces_as_upstream_unavailable(
+    client: SchenkerClient,
+) -> None:
+    """If the initial SPA GET (XSRF cookie prime) raises a connection
+    error, `_prime_xsrf` translates it into `UpstreamUnavailableError`.
+    """
+    with respx.mock(base_url=API) as mock:
+        mock.get("/app/tracking-public/").mock(
+            side_effect=httpx.ConnectError("connection refused")
+        )
+        with pytest.raises(UpstreamUnavailableError):
+            await client.resolve("X")
+    await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_upstream_timeout_becomes_upstream_unavailable(
+    client: SchenkerClient,
+) -> None:
+    with respx.mock(base_url=API) as mock:
+        mock.get("/app/tracking-public/").respond(200, html="<html/>")
+        mock.get("/nges-portal/api/public/tracking-public/shipments").mock(
+            side_effect=httpx.TimeoutException("read timeout")
+        )
+        with pytest.raises(UpstreamUnavailableError, match="timeout"):
+            await client.resolve("X")
+    await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_upstream_connection_error_becomes_upstream_unavailable(
+    client: SchenkerClient,
+) -> None:
+    with respx.mock(base_url=API) as mock:
+        mock.get("/app/tracking-public/").respond(200, html="<html/>")
+        mock.get("/nges-portal/api/public/tracking-public/shipments").mock(
+            side_effect=httpx.ConnectError("network down")
+        )
+        with pytest.raises(UpstreamUnavailableError, match="connection"):
+            await client.resolve("X")
+    await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_4xx_other_than_404_429_becomes_upstream_unavailable(
+    client: SchenkerClient,
+) -> None:
+    """A 400/401/403 is not in our explicit-error set; the catch-all
+    `>= 400` branch (line 175) translates them to upstream_unavailable
+    so callers see a consistent error taxonomy.
+    """
+    with respx.mock(base_url=API) as mock:
+        mock.get("/app/tracking-public/").respond(200, html="<html/>")
+        mock.get("/nges-portal/api/public/tracking-public/shipments").respond(403)
+        with pytest.raises(UpstreamUnavailableError, match="403"):
+            await client.resolve("X")
+    await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_non_json_response_becomes_upstream_unavailable(
+    client: SchenkerClient,
+) -> None:
+    """Upstream returning a 200 with text/html (e.g., maintenance page)
+    cannot be JSON-decoded — surfaces as upstream_unavailable.
+    """
+    with respx.mock(base_url=API) as mock:
+        mock.get("/app/tracking-public/").respond(200, html="<html/>")
+        mock.get("/nges-portal/api/public/tracking-public/shipments").respond(
+            200,
+            text="<html><body>Down for maintenance</body></html>",
+            headers={"content-type": "text/html"},
+        )
+        with pytest.raises(UpstreamUnavailableError, match="non-JSON"):
+            await client.resolve("X")
+    await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_context_manager_closes_client() -> None:
+    """`async with SchenkerClient() as c` returns the client and closes
+    it on exit (lines 87 + 90).
+    """
+    async with SchenkerClient() as c:
+        assert isinstance(c, SchenkerClient)
+    # After exit, the inner httpx client should be closed.
+    assert c._client.is_closed
