@@ -49,7 +49,9 @@ def build_app() -> FastAPI:
                 await deps.aclose()
                 _log.info("app.stopped")
 
-    app = FastAPI(title="db2st-mcp", version="0.0.1", lifespan=lifespan)
+    from db2st_mcp import __version__ as _pkg_version
+
+    app = FastAPI(title="db2st-mcp", version=_pkg_version, lifespan=lifespan)
     app.state.deps = deps
 
     @app.get("/healthz")
