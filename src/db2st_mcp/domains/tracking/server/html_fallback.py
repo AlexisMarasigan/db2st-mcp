@@ -44,7 +44,12 @@ class PlaywrightHtmlFallback:
 
     async def fetch(self, reference: str) -> Shipment:
         try:
-            from playwright.async_api import async_playwright
+            from playwright.async_api import (
+                Error as PlaywrightError,
+            )
+            from playwright.async_api import (
+                async_playwright,
+            )
         except ImportError as e:
             raise UpstreamUnavailableError(
                 "playwright not installed (install with the [fallback] extra)"
@@ -62,8 +67,27 @@ class PlaywrightHtmlFallback:
                     locale="en-US",
                 )
                 page = await ctx.new_page()
-                await page.goto(f"{self.SPA_URL}?refNumber={reference}", wait_until="networkidle")
-                data = await page.evaluate(_EXTRACTION_SCRIPT)
+                try:
+                    await page.goto(
+                        f"{self.SPA_URL}?refNumber={reference}",
+                        wait_until="networkidle",
+                    )
+                    data = await page.evaluate(_EXTRACTION_SCRIPT)
+                except PlaywrightError as e:
+                    # Playwright timeouts + navigation errors all inherit
+                    # from `playwright.async_api.Error`. Map to a domain
+                    # error so the wire response stays in our taxonomy
+                    # (`upstream_unavailable`) and the service-layer
+                    # breaker counts it as a failure.
+                    _log.warning(
+                        "html_fallback.playwright_error",
+                        reference=reference,
+                        exc=type(e).__name__,
+                    )
+                    raise UpstreamUnavailableError(
+                        "html fallback failed",
+                        details={"reference": reference, "cause": type(e).__name__},
+                    ) from e
             finally:
                 await browser.close()
 
