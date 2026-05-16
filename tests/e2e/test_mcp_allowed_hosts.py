@@ -14,9 +14,7 @@ the env-driven happy path actually works under uvicorn.
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import os
-import signal
 import socket
 import sys
 
@@ -102,13 +100,9 @@ async def test_custom_host_accepted_when_in_allowlist() -> None:
             f"(status={response.status_code}, body={response.text[:200]!r})"
         )
     finally:
-        proc.send_signal(signal.SIGTERM)
-        try:
-            await asyncio.wait_for(proc.wait(), timeout=5)
-        except TimeoutError:
-            proc.kill()
-            with contextlib.suppress(Exception):
-                await proc.wait()
+        from tests.e2e.conftest import terminate_cleanly
+
+        await terminate_cleanly(proc)
 
 
 @pytest.mark.asyncio
@@ -154,10 +148,6 @@ async def test_unlisted_host_still_rejected() -> None:
 
         assert response.status_code == 421
     finally:
-        proc.send_signal(signal.SIGTERM)
-        try:
-            await asyncio.wait_for(proc.wait(), timeout=5)
-        except TimeoutError:
-            proc.kill()
-            with contextlib.suppress(Exception):
-                await proc.wait()
+        from tests.e2e.conftest import terminate_cleanly
+
+        await terminate_cleanly(proc)
