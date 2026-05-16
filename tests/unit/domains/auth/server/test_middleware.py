@@ -109,3 +109,36 @@ async def test_middleware_returns_429_when_exhausted() -> None:
     assert second.status_code == 429
     assert second.json()["error"] == "quota_exceeded"
     assert second.headers["retry-after"] == "86400"
+
+
+@pytest.mark.asyncio
+async def test_middleware_binds_token_id_to_contextvars() -> None:
+    """On successful auth, the middleware binds `token_id` and `plan` to
+    structlog's contextvars so downstream log lines are correlated.
+
+    Regression: iter 29 found that `request_id_middleware` was reading
+    `request.state.auth` *before* this middleware had populated it,
+    silently dropping `token_id` from every log line. The binding now
+    lives here, where it runs after authenticate succeeds.
+    """
+    import structlog
+    from starlette.applications import Starlette
+    from starlette.middleware.base import BaseHTTPMiddleware
+    from starlette.routing import Route
+
+    store = InMemoryTokenStore()
+    record, secret = await store.mint(plan="pro", daily_limit=10)
+
+    async def echo_contextvars(request):  # type: ignore[no-untyped-def]
+        return JSONResponse(dict(structlog.contextvars.get_contextvars()))
+
+    app = Starlette(routes=[Route("/echo", echo_contextvars)])
+    app.add_middleware(BaseHTTPMiddleware, dispatch=bearer_auth_middleware(store))
+
+    client = TestClient(app)
+    response = client.get("/echo", headers={"Authorization": f"Bearer {secret}"})
+
+    assert response.status_code == 200
+    ctx = response.json()
+    assert ctx["token_id"] == record.id
+    assert ctx["plan"] == "pro"

@@ -1,5 +1,8 @@
-"""Request-correlation middleware. Binds a request id + token id to the
-structlog context so every log line in a request is correlatable.
+"""Request-correlation middleware. Binds a request id to the structlog
+context so every log line in a request is correlatable. The token id is
+bound separately by the auth middleware after the bearer is validated —
+this middleware runs outermost (added last; Starlette is LIFO) so
+`request.state.auth` is always None at this point.
 """
 
 from __future__ import annotations
@@ -19,13 +22,9 @@ async def request_id_middleware(
     call_next: Callable[[Request], Awaitable[Response]],
 ) -> Response:
     request_id = request.headers.get("x-request-id") or str(uuid.uuid4())
-    token_id = getattr(request.state, "auth", None)
-    bind: dict[str, object] = {"request_id": request_id, "path": request.url.path}
-    if token_id is not None:
-        bind["token_id"] = token_id.token_id
 
     structlog.contextvars.clear_contextvars()
-    structlog.contextvars.bind_contextvars(**bind)
+    structlog.contextvars.bind_contextvars(request_id=request_id, path=request.url.path)
     try:
         response = await call_next(request)
     except Exception:
