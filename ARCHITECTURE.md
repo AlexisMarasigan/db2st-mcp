@@ -34,7 +34,10 @@ Every request follows this path. Everything else is supporting detail.
 
 ## Shared
 
-`src/db2st_mcp/shared/` — config loader, structured logger, error taxonomy, HTTP client wrapper. Imported by domains and apps. Never imports from them.
+`src/db2st_mcp/shared/` — config loader, structured logger, error
+taxonomy, response cache (in-memory + Upstash-backed), circuit
+breaker, schema-drift detector, optional OpenTelemetry hooks.
+Imported by domains and apps. Never imports from them.
 
 ## Domain dependency graph
 
