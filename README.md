@@ -58,6 +58,11 @@ curl https://your-host/mcp/ \
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for system architecture and domain documentation.
 
+## Testing
+
+See [docs/TESTING.md](docs/TESTING.md) for the unit/integration/e2e split,
+coverage gates, and CI workflows.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [CLAUDE.md](CLAUDE.md).
