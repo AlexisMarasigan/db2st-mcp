@@ -106,6 +106,19 @@ hosting target is chosen.
   current threat model relies entirely on secret entropy (2^256
   keyspace) to resist brute force — adequate but worth an IP-level
   guard so attackers can't even mount a guessing campaign.
+- **Public demo endpoint with a free-tier token** (deferred from
+  Sprint 4). Needs a hosting target — viable free-tier options
+  worth evaluating:
+  - Fly.io: native Docker, scale-to-zero, free vCPU + storage.
+    `deploy/Dockerfile` builds cleanly; `flyctl deploy` would
+    suffice once `MCP_ALLOWED_HOSTS`, `TOKEN_STORE=upstash`, and
+    Upstash creds are set as secrets.
+  - Railway / Render: same shape, push-to-deploy from GitHub.
+  - GCP Cloud Run: closest to the Knative target (same autoscaler
+    semantics), free tier covers occasional demo traffic.
+  Any of those need a single mint-and-publicly-publish dev token
+  with a low `daily_limit` (e.g., 100) so the demo can't be
+  abused into a rate-limit drain on the upstream.
 
 ## Decision Log
 
