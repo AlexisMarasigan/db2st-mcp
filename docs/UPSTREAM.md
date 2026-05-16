@@ -35,19 +35,27 @@ and fetches the corresponding type-specific endpoint.
 
 ## Type-specific detail endpoints
 
-Derived from the bundle constants:
+What the client actually dispatches (see `DETAIL_PATHS` in
+`server/schenker_client.py`):
 
-| Type | Path (suffix from `backendUrl`) |
+| `ShipmentType` | Path (suffix appended to `backendUrl`) |
 |---|---|
-| Land (generic) | `/shipment/land/` |
-| Land — Sweden | `/shipments/land/se` |
-| Ocean | `/shipment/ocean/` |
-| Air | `/shipment/air/` |
-| Air/Ocean overview | `/shipment/air-ocean/search` |
-| AU / NZ (domestic) | `/shipment/au/` |
-| DSV (consolidated) | `/shipments/dsv` |
-| ATOL | `/shipments/atol` |
-| COS | `/shipments/cos` |
+| `land` | `/shipment/land/` |
+| `land_se` | `/shipments/land/se/` |
+| `land_au` | `/shipment/au/` |
+| `ocean` | `/shipment/ocean/` |
+| `air` | `/shipment/air/` |
+| `dsv` | `/shipments/dsv/` |
+| `atol` | `/shipments/atol/` |
+| `cos` | `/shipments/cos/` |
+| `unknown` | `/shipment/land/` (safest default) |
+
+Trailing slashes match what the upstream's own SPA sends — observed in
+devtools, mirrored verbatim by the client. The bundle additionally
+declares an `air-ocean/search` overview endpoint; we don't dispatch to
+it because the per-mode `air` and `ocean` endpoints already cover the
+detail-fetch role, and adding it would add a code path with no
+incremental tool surface.
 
 The `track_shipment` tool's job: call the resolver, then dispatch to the
 correct detail endpoint based on the resolver's type hint.
