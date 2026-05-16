@@ -115,7 +115,10 @@ async def test_tools_list_exposes_track_shipment(
         {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
     )
     tool_names = [t["name"] for t in response["result"]["tools"]]
+    # Both tools (sprint 1 + sprint 4 stretch) must appear in the live
+    # MCP subprocess's tool list — not just one or the other.
     assert "track_shipment" in tool_names
+    assert "track_shipment_events" in tool_names
 
 
 @pytest.mark.asyncio
@@ -164,4 +167,50 @@ async def test_tools_call_returns_well_formed_envelope(
     result = response["result"]
     assert "content" in result
     # Either successful (isError absent/False) or a structured error envelope.
+    assert isinstance(result.get("isError", False), bool)
+
+
+@pytest.mark.asyncio
+async def test_tools_call_track_shipment_events_returns_well_formed_envelope(
+    mcp_subprocess: asyncio.subprocess.Process,
+) -> None:
+    """Same shape contract as `track_shipment`, but for the lighter
+    events-only tool. From a fresh egress IP the response carries a
+    list of event objects; from a rate-limited test runner it's a
+    structured `upstream_unavailable` error. Either is a well-formed
+    JSON-RPC envelope.
+    """
+    await _send(
+        mcp_subprocess,
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2025-06-18",
+                "capabilities": {"tools": {}},
+                "clientInfo": {"name": "e2e", "version": "0.0.1"},
+            },
+        },
+    )
+    await _notify(mcp_subprocess, "notifications/initialized")
+
+    response = await _send(
+        mcp_subprocess,
+        {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {
+                "name": "track_shipment_events",
+                "arguments": {"reference": "1806203236"},
+            },
+        },
+        timeout=45,
+    )
+
+    assert response["jsonrpc"] == "2.0"
+    assert response["id"] == 2
+    result = response["result"]
+    assert "content" in result
     assert isinstance(result.get("isError", False), bool)
