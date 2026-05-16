@@ -9,6 +9,17 @@ land on `main` without a bump.
 
 ### Added
 
+- `tests/integration/test_real_upstream.py` parametrising the 11 sample
+  references from the original brief through the real `TrackingService`.
+  Marked `integration` and deselected by default; opt in with
+  `pytest -m integration`. Nightly job in
+  `.github/workflows/e2e.yml`.
+- `tests/unit/apps/server/test_request_id_middleware.py` — 4 tests
+  pinning UUID generation, header preservation, and contextvars
+  binding for the request-id middleware.
+- `docker` CI job (`.github/workflows/ci.yml`) that builds
+  `deploy/Dockerfile`, runs the container, polls `/healthz`, and
+  asserts HTTP 200.
 - `LICENSE`, `SECURITY.md`, and this `CHANGELOG.md`.
 - `scripts/example_call.py` — runnable demo client showing the JSON-RPC
   handshake plus a real `tools/call`. Unit-tested.
@@ -58,6 +69,24 @@ land on `main` without a bump.
 - `PlaywrightHtmlFallback` now raises `NotFoundError` on the SPA's
   "Shipment not found!" marker instead of returning a misleading
   "scraped" event.
+- `deploy/Dockerfile` was completely broken — missing `uv.lock` COPY
+  plus the project itself was never installed in the runtime image
+  (`ModuleNotFoundError: No module named 'db2st_mcp'`). Rebuilt around
+  `uv build --wheel` + `pip install --prefix=/install` so the runtime
+  stage gets a clean relocatable tree. Smoke-verified by the new
+  `docker` CI job.
+- CLI subcommands (`mint`, `tokens list`, `tokens revoke`) leaked the
+  `SchenkerClient`'s httpx.AsyncClient — `AppDeps` was never closed.
+  Each command now wraps its work in try/finally with
+  `await deps.aclose()`.
+- README's "Use as a deployed MCP" `curl` example was missing
+  `Accept: application/json, text/event-stream`. Streamable HTTP
+  rejected the request before tool dispatch.
+- README Quickstart claimed `pytest` covers integration tests; the
+  default now passes `-m "not integration"`, so the Quickstart now
+  also documents the opt-in `-m integration` command.
+- `deploy/func.yaml` `REPLACE_ME` placeholders now have a header
+  comment that explains exactly what to substitute.
 
 ### Removed
 
