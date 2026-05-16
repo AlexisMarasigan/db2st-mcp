@@ -73,10 +73,23 @@ Examples:
 
 ## Adding a new tool
 
-1. Live in the relevant domain's `server/` (or create a new domain).
-2. Input/output schema as Pydantic models in `shared/schemas.py`.
-3. Tool registered in `apps/server/main.py` (no business logic there).
-4. Unit tests for the handler. Integration tests if it calls a real upstream.
+1. Handler lives in the relevant domain's `server/tool.py` (or create
+   a new domain). The handler is the async function that does the
+   work; keep it thin and delegate orchestration to a service class.
+2. **Input args** schema as a Pydantic model alongside the handler
+   in `server/tool.py` (e.g., `TrackShipmentArgs`). **Output entity**
+   schemas (the data the tool returns) live in `shared/schemas.py` —
+   one source of truth for the domain contract.
+3. Register the tool in `apps/server/mcp_app.py` via
+   `@mcp.tool(...)`. `apps/server/` only wires; no business logic.
+4. Unit tests for the handler in `tests/unit/domains/<name>/server/`.
+   Integration tests if it calls a real upstream
+   (`tests/integration/`, marked `integration`, deselected by
+   default). At least one e2e test that hits the tool through the
+   real MCP transport (`tests/e2e/test_mcp_stdio.py` or a sibling).
+5. Update the domain's `DOMAIN.md` Public-surface table and the
+   `APP.md` composition diagram. `verify-docs` will complain
+   otherwise.
 
 ## Releases
 
