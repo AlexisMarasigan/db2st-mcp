@@ -81,3 +81,30 @@ def test_events_reference_min_length_enforced() -> None:
 
     with pytest.raises(ValidationError):
         TrackShipmentEventsArgs(reference="abc")
+
+
+# --- whitespace-only references --------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_track_shipment_rejects_whitespace_only_reference() -> None:
+    """Pydantic min_length=4 accepts `"    "` (4 spaces) because it's 4
+    chars. The `args.reference.strip()` check in the handler defends
+    against this: real references aren't whitespace.
+    """
+    from db2st_mcp.shared.errors import InvalidInputError
+
+    service = _FakeService()
+    args = TrackShipmentArgs(reference="    ")
+    with pytest.raises(InvalidInputError):
+        await track_shipment(args, service=service)  # type: ignore[arg-type]
+
+
+@pytest.mark.asyncio
+async def test_track_shipment_events_rejects_whitespace_only_reference() -> None:
+    from db2st_mcp.shared.errors import InvalidInputError
+
+    service = _FakeService()
+    args = TrackShipmentEventsArgs(reference="    ")
+    with pytest.raises(InvalidInputError):
+        await track_shipment_events(args, service=service)  # type: ignore[arg-type]
