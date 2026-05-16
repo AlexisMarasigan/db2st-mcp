@@ -102,12 +102,6 @@ jobs:
     needs: [lint, typecheck, test]
     steps:
       - uses: actions/checkout@v4
-      - name: Generate uv.lock if missing
-        run: |
-          if [ ! -f uv.lock ]; then
-            curl -LsSf https://astral.sh/uv/install.sh | sh
-            uv lock
-          fi
       - name: Build image
         uses: docker/build-push-action@v6
         with:
