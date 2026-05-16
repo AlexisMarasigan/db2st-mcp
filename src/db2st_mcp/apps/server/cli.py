@@ -82,14 +82,17 @@ def _cmd_mint(args: argparse.Namespace) -> int:
     deps = build_deps(settings)
 
     async def _run() -> dict[str, object]:
-        record, secret = await deps.token_store.mint(args.plan, args.limit)
-        return {
-            "id": record.id,
-            "plan": record.plan,
-            "daily_limit": record.daily_limit,
-            "secret": secret,
-            "warning": "store this secret now — it is not recoverable.",
-        }
+        try:
+            record, secret = await deps.token_store.mint(args.plan, args.limit)
+            return {
+                "id": record.id,
+                "plan": record.plan,
+                "daily_limit": record.daily_limit,
+                "secret": secret,
+                "warning": "store this secret now — it is not recoverable.",
+            }
+        finally:
+            await deps.aclose()
 
     result = asyncio.run(_run())
     print(json.dumps(result, indent=2))
@@ -99,7 +102,16 @@ def _cmd_mint(args: argparse.Namespace) -> int:
 def _cmd_tokens_list() -> int:
     settings = get_settings()
     deps = build_deps(settings)
-    records = asyncio.run(deps.token_store.list())
+
+    from db2st_mcp.domains.auth.shared import TokenRecord
+
+    async def _run() -> list[TokenRecord]:
+        try:
+            return await deps.token_store.list()
+        finally:
+            await deps.aclose()
+
+    records = asyncio.run(_run())
     print(
         json.dumps(
             [
@@ -121,7 +133,14 @@ def _cmd_tokens_list() -> int:
 def _cmd_tokens_revoke(args: argparse.Namespace) -> int:
     settings = get_settings()
     deps = build_deps(settings)
-    asyncio.run(deps.token_store.revoke(args.token_id))
+
+    async def _run() -> None:
+        try:
+            await deps.token_store.revoke(args.token_id)
+        finally:
+            await deps.aclose()
+
+    asyncio.run(_run())
     print(json.dumps({"id": args.token_id, "status": "revoked"}))
     return 0
 

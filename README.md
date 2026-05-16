@@ -10,7 +10,8 @@ The first tool wraps DB Schenker's public shipment tracking endpoint. The shape 
 uv sync --group dev              # install deps
 cp .env.example .env             # configure
 uv run db2st-mcp serve           # start HTTP server on :8080
-uv run pytest                    # unit + integration tests
+uv run pytest                    # unit suite (integration tests deselected)
+uv run pytest -m integration     # live upstream — needs unblocked egress IP
 uv run pytest tests/e2e --report # E2E + Markdown report
 ```
 
