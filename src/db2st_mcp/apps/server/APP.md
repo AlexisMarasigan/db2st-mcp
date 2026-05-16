@@ -36,12 +36,25 @@ FastAPI app
 
 ## Boot order
 
-1. `configure_logging()` from `shared.logging`.
-2. Build `TokenStore` from `shared.config` (memory vs upstash).
-3. Build `SchenkerClient` (lazy).
-4. Register tools with the MCP server.
-5. Mount transport + middleware on FastAPI.
-6. Yield app to uvicorn.
+1. `configure_logging()` from `shared.logging` (module import time).
+2. `build_deps(settings)` constructs the dependency bundle:
+   `TokenStore` (memory vs upstash), `SchenkerClient`,
+   `TrackingService`, and the response cache backend
+   (memory `TTLCache` or `UpstashCache`, gated by
+   `RESPONSE_CACHE_BACKEND`).
+3. `build_mcp_server(deps.tracking_service)` instantiates `FastMCP`
+   and registers the two domain tools.
+4. `FastAPI(lifespan=...)` is constructed. The lifespan composes
+   `mcp.session_manager.run()` so its task group is live before the
+   first request hits `/mcp`.
+5. `/healthz` route added.
+6. Middleware added (LIFO order — last `add_middleware` runs first):
+   - `bearer_auth_middleware` (skipped when `DB2ST_AUTH_DISABLED=1`)
+   - `request_id_middleware` (added last → runs first; binds
+     `request_id` to structlog contextvars before auth touches them)
+7. `app.mount("/mcp", mcp.streamable_http_app())`.
+8. `instrument_app(app)` opts the app into OpenTelemetry tracing
+   when `OTEL_EXPORTER_OTLP_ENDPOINT` is set; no-op otherwise.
 
 ## Failure surface
 
