@@ -47,6 +47,11 @@ Two MCP tools are registered:
 | `track_shipment` | Full structured shipment (sender, receiver, package, history). |
 | `track_shipment_events` | Just the chronological events timeline — lighter for poll-style clients. |
 
+> Claude Code caches the MCP tool list per session. If you added this
+> MCP before both tools were registered, restart Claude Code (or
+> `claude mcp remove db2st-mcp -s user` and re-add) so the second
+> tool is exposed.
+
 Want to see the raw JSON-RPC handshake + a `tools/call` exchange without
 involving Claude Code? Run the example client:
 
