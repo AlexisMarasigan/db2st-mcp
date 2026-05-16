@@ -9,6 +9,38 @@ land on `main` without a bump.
 
 ### Added
 
+- `.github/workflows/release.yml` — tagged release pipeline. Verifies
+  the tag matches the `pyproject.toml` version, runs the full gate
+  set (ruff, ruff-format, mypy strict, unit tests, verify-docs,
+  bandit medium+), builds the wheel + sdist via `uv build`,
+  generates SHA256SUMS, and creates a GitHub Release with auto
+  notes + artefacts attached. `workflow_dispatch` lets a maintainer
+  re-run for an existing tag.
+- `MCP_ALLOWED_HOSTS` env var on the FastMCP transport — extends the
+  SDK's `127.0.0.1:*` / `localhost:*` / `[::1]:*` default with the
+  operator's production hostname(s). Comma-separated. Documented in
+  `.env.example`, `docs/KNATIVE.md`, and `deploy/func.yaml`.
+- `tests/e2e/test_http_serve.py` — spawns `db2st-mcp serve` as a
+  real OS process, polls `/healthz`, hits `/mcp/` unauthenticated,
+  asserts the structured 401 envelope, and tears down via SIGTERM.
+- `tests/e2e/test_stdio_stdout_clean.py` — pins stdout cleanliness
+  for the stdio MCP path at `LOG_LEVEL=info`.
+- `tests/unit/domains/tracking/server/test_parser_helpers.py` — 45
+  parametrised tests for `_decimal`, `_int`, `_str`, `_datetime`,
+  `_classify`.
+- `tests/unit/apps/server/test_transport_security.py` — pins the
+  `MCP_ALLOWED_HOSTS` parsing (empty / single / multi / whitespace).
+- `tests/unit/domains/tracking/server/test_schenker_client_base_url.py`
+  — pins that `SCHENKER_BASE_URL` actually changes the client's
+  base URL.
+- `deploy/knative-serving.yaml` — minimal `KnativeServing` CR
+  applied by the bootstrap script.
+- `scripts/local-cluster.sh` — bootstraps a local `kind` + Knative
+  cluster and runs `func deploy --build --push=false`.
+- `.dockerignore` — trims Docker build context from 377 MB to 8.7 kB.
+- `scripts/verify_docs.py` `check_inrepo_references_exist()` — flags
+  doc-referenced paths that don't actually exist in the tree.
+  Catches the cross-iteration class of bug that surfaced in iter 22.
 - `tests/integration/test_real_upstream.py` parametrising the 11 sample
   references from the original brief through the real `TrackingService`.
   Marked `integration` and deselected by default; opt in with
@@ -87,11 +119,43 @@ land on `main` without a bump.
   also documents the opt-in `-m integration` command.
 - `deploy/func.yaml` `REPLACE_ME` placeholders now have a header
   comment that explains exactly what to substitute.
+- `configure_logging` was writing to `sys.stdout`. The stdio MCP
+  transport requires stdout for JSON-RPC frames; at the production
+  default `LOG_LEVEL=info` every boot log corrupted framing.
+  Switched to `sys.stderr`. Pinned by
+  `tests/e2e/test_stdio_stdout_clean.py`.
+- `_cmd_stdio` called `asyncio.run(deps.aclose())` *after*
+  `mcp.run(transport="stdio")` had already torn down its event loop,
+  so cleanup silently never ran. Re-implemented around
+  `mcp.run_stdio_async()` inside a single `asyncio.run()` with
+  proper try/finally.
+- `SCHENKER_BASE_URL` was documented in `.env.example` and read into
+  `Settings` but `SchenkerClient` hardcoded `https://mydsv.dsv.com`.
+  Now properly plumbed; default updated to the real upstream
+  (the legacy host 302-redirects there anyway).
+- `--report` pytest CLI flag was registered only inside
+  `tests/e2e/conftest.py`, so `pytest --report tests/unit` failed
+  with "unrecognized arguments". Hoisted registration to the root
+  conftest.
+- `docs/KNATIVE.md` referenced `deploy/knative-serving.yaml` and
+  `scripts/local-cluster.sh`, neither of which existed. Created
+  both as real, validated files.
+- Doc drift: DOMAIN.md files referenced consolidated-away test
+  filenames (test_auth.py, test_tracking.py — both consolidated
+  into the single tests/integration/test_real_upstream.py). Verified
+  via the new check_inrepo_references_exist rule.
+- Stale "sprint 2 wires it" / "sprint 2 enhancement" docstrings
+  removed from the auth middleware; replaced with the actual
+  contract.
 
 ### Removed
 
 - Initial TypeScript scaffold (`package.json` / `tsconfig.json`),
   replaced by the Python project before any code shipped.
+- Dead `src/db2st_mcp/shared/http.py::upstream_client` — declared
+  "domains use this instead of raw httpx" but never called by any
+  domain. Tested-but-unused = dead. Module and its smoke test
+  removed.
 
 ## Notes
 
