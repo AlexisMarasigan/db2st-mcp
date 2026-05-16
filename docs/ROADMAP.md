@@ -2,7 +2,7 @@
 
 Phased plan. Each sprint ends with a runnable, demonstrable artifact.
 
-## Sprint 0 — Foundations (current)
+## Sprint 0 — Foundations
 
 - [x] Repo skeleton + Clara-style docs
 - [x] CLAUDE.md AI entry
