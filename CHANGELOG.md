@@ -57,6 +57,18 @@ land on `main` without a bump.
   block on 4 sites; dropped one stale `# nosec B104` annotation
   that bandit was reporting as unused. `Total potential issues
   skipped` 6 → 5; WARNINGs 9 → 0.
+- The iter-80 KV-backed cache feature wired
+  `RESPONSE_CACHE_BACKEND` through `Settings`, `build_deps`, and
+  `.env.example`, but missed `deploy/func.yaml`. An operator
+  running `func deploy` would have silently gotten the default
+  per-pod memory cache — defeating the point of the KV-backed
+  cache in a multi-pod deployment, where each pod would serve
+  stale or empty results independently and burn upstream quota.
+  Added `RESPONSE_CACHE_BACKEND=upstash` +
+  `RESPONSE_CACHE_TTL_SECONDS=60` to `deploy/func.yaml`'s `envs`
+  block (with a comment explaining why "memory" is wrong in a
+  multi-pod context), and synced the `func.yaml` essentials
+  snippet in `docs/KNATIVE.md`.
 
 ### Added
 
