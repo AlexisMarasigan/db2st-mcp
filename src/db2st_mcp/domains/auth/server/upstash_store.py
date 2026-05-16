@@ -115,6 +115,17 @@ class UpstashTokenStore:
                 break
         return records
 
+    async def aclose(self) -> None:
+        """Close the underlying httpx connection pool.
+
+        Sibling of `UpstashCache.aclose`; both wrap the same upstash-redis
+        client. On graceful shutdown we want the httpx connections
+        released cleanly rather than waiting for GC.
+        """
+        close = getattr(self._redis, "close", None)
+        if close is not None:
+            await close()
+
 
 def _encode_record(record: TokenRecord) -> str:
     return record.model_dump_json()

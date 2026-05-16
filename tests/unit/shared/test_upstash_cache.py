@@ -168,3 +168,32 @@ def test_from_settings_with_creds_constructs(
         key_prefix="p",
     )
     assert cache._ttl == 30
+
+
+@pytest.mark.asyncio
+async def test_aclose_calls_redis_close(fake_redis: type[FakeAsyncRedis]) -> None:
+    """`UpstashCache.aclose()` releases the upstash-redis httpx pool.
+    Without this, the iter-130 production fix to `AppDeps.aclose()`
+    would silently no-op for the cache."""
+    cache = _make_cache(fake_redis)
+    closed = {"called": False}
+
+    async def _fake_close() -> None:
+        closed["called"] = True
+
+    cache._redis.close = _fake_close
+    await cache.aclose()
+    assert closed["called"] is True
+
+
+@pytest.mark.asyncio
+async def test_aclose_tolerates_missing_close_method(
+    fake_redis: type[FakeAsyncRedis],
+) -> None:
+    """Older upstash-redis versions may not expose `close()`. The
+    `getattr(..., None)` guard means `aclose()` is a no-op in that
+    case rather than raising AttributeError."""
+    cache = _make_cache(fake_redis)
+    # The FakeAsyncRedis fixture doesn't define a `close` method; the
+    # guard should swallow that and return normally.
+    await cache.aclose()

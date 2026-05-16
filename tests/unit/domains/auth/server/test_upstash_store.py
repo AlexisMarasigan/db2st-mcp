@@ -211,3 +211,29 @@ def test_decode_record_handles_all_payload_shapes() -> None:
     decoded_dict = _decode_record(sample.model_dump(mode="json"))
     assert decoded_dict is not None
     assert decoded_dict.id == sample.id
+
+
+@pytest.mark.asyncio
+async def test_aclose_calls_redis_close(fake_redis: type[FakeAsyncRedis]) -> None:
+    """Sibling of `test_aclose_calls_redis_close` for `UpstashCache`:
+    the iter-130 production fix to `AppDeps.aclose()` relies on the
+    store exposing aclose. Without this test, removing the call site
+    leaves shutdown leaking the upstash-redis httpx pool until GC.
+    """
+    store = _store(fake_redis)
+    closed = {"called": False}
+
+    async def _fake_close() -> None:
+        closed["called"] = True
+
+    store._redis.close = _fake_close
+    await store.aclose()
+    assert closed["called"] is True
+
+
+@pytest.mark.asyncio
+async def test_aclose_tolerates_missing_close_method(
+    fake_redis: type[FakeAsyncRedis],
+) -> None:
+    store = _store(fake_redis)
+    await store.aclose()
