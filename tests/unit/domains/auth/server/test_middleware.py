@@ -33,6 +33,29 @@ def _app(store: InMemoryTokenStore) -> Starlette:
     return app
 
 
+class _SpyLogger:
+    """Captures structlog `info` calls for assertions."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, dict[str, object]]] = []
+
+    def info(self, event: str, **kw: object) -> None:
+        self.calls.append((event, kw))
+
+
+@pytest.fixture
+def spy_log(monkeypatch: pytest.MonkeyPatch) -> _SpyLogger:
+    """Replace the middleware module's bound logger with a spy.
+    Patches the module's `_log` directly because structlog caches
+    its processor chain at first use, which makes `caplog`-based
+    assertions order-dependent across the suite."""
+    from db2st_mcp.domains.auth.server import middleware as mw
+
+    spy = _SpyLogger()
+    monkeypatch.setattr(mw, "_log", spy)
+    return spy
+
+
 def test_extract_bearer_raises_when_missing() -> None:
     from starlette.requests import Request
 
@@ -81,54 +104,33 @@ def test_auth_failure_message_is_identical_for_missing_and_invalid() -> None:
     assert missing["message"] == wrong["message"] == revoked_marker["message"]
 
 
-def test_auth_failure_logs_distinguish_cause(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_auth_failure_logs_distinguish_cause(spy_log: _SpyLogger) -> None:
     """Wire response stays generic, but the internal log line MUST
     carry a distinct `reason` so ops dashboards can split 401s by
     cause. Pairs with the message-identicality test above: outside
     the trust boundary the three branches look the same; inside,
     they don't.
-
-    Patches the middleware module's bound logger directly because
-    structlog caches its processor chain at first use, which makes
-    `caplog`-based assertions order-dependent across the suite.
     """
-    from db2st_mcp.domains.auth.server import middleware as mw
-
-    calls: list[tuple[str, dict[str, object]]] = []
-
-    class _SpyLogger:
-        def info(self, event: str, **kw: object) -> None:
-            calls.append((event, kw))
-
-    monkeypatch.setattr(mw, "_log", _SpyLogger())
-
     store = InMemoryTokenStore()
     client = TestClient(_app(store))
     client.get("/protected")  # missing
     client.get("/protected", headers={"Authorization": "Bearer nope"})  # unknown
 
-    reasons = {kw.get("reason") for event, kw in calls if event == "auth.failure"}
+    reasons = {
+        kw.get("reason") for event, kw in spy_log.calls if event == "auth.failure"
+    }
     assert "header_missing_or_malformed" in reasons
     assert "token_unknown" in reasons
 
 
 @pytest.mark.asyncio
 async def test_quota_exhaustion_emits_log_with_token_id(
-    monkeypatch: pytest.MonkeyPatch,
+    spy_log: _SpyLogger,
 ) -> None:
     """Same observability pattern as `auth.failure` but for 429s.
     Ops dashboards split 429-by-token to spot abusive callers; the
     log line carries the token_id so the dashboard query is cheap.
     """
-    from db2st_mcp.domains.auth.server import middleware as mw
-
-    calls: list[tuple[str, dict[str, object]]] = []
-
-    class _SpyLogger:
-        def info(self, event: str, **kw: object) -> None:
-            calls.append((event, kw))
-
-    monkeypatch.setattr(mw, "_log", _SpyLogger())
 
     store = InMemoryTokenStore()
     record, secret = await store.mint(plan="free", daily_limit=1)
@@ -139,7 +141,9 @@ async def test_quota_exhaustion_emits_log_with_token_id(
     response = client.get("/protected", headers={"Authorization": f"Bearer {secret}"})
     assert response.status_code == 429
 
-    quota_events = [kw for event, kw in calls if event == "auth.quota_exhausted"]
+    quota_events = [
+        kw for event, kw in spy_log.calls if event == "auth.quota_exhausted"
+    ]
     assert len(quota_events) == 1
     assert quota_events[0]["token_id"] == record.id
     assert quota_events[0]["plan"] == "free"
