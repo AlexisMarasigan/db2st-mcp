@@ -149,21 +149,20 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     command = args.command or "serve"
 
+    # argparse already restricts `command` to {serve, stdio, mint, tokens}
+    # (or None → defaults to "serve" above), so no else branch is needed.
     if command == "serve":
         return _cmd_serve(args)
     if command == "stdio":
         return _cmd_stdio()
     if command == "mint":
         return _cmd_mint(args)
-    if command == "tokens":
-        if args.tokens_command == "list":
-            return _cmd_tokens_list()
-        if args.tokens_command == "revoke":
-            return _cmd_tokens_revoke(args)
-        print("tokens: missing subcommand (list|revoke)", file=sys.stderr)
-        return 2
-
-    print(f"unknown command: {command}", file=sys.stderr)
+    # command == "tokens"
+    if args.tokens_command == "list":
+        return _cmd_tokens_list()
+    if args.tokens_command == "revoke":
+        return _cmd_tokens_revoke(args)
+    print("tokens: missing subcommand (list|revoke)", file=sys.stderr)
     return 2
 
 
