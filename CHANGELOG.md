@@ -9,6 +9,32 @@ land on `main` without a bump.
 
 ### Added
 
+- `docs/TESTING.md` — unit/integration/e2e layout, coverage gate,
+  `pytest -W error` caveat, CI workflow inventory, test-isolation
+  rules. README links to it.
+- Test-coverage push from ~88% to **94.27%**:
+  - `apps/server/cli.py` 80.95% → 100% (`_cmd_serve` and `_cmd_stdio`
+    dispatches now mock uvicorn / `run_stdio_async`).
+  - `apps/server/dependencies.py` 76% → 100% (upstash branch + HTML
+    fallback branch + graceful degradation when fallback missing).
+  - `apps/server/main.py` 95.92% → 100% (`DB2ST_AUTH_DISABLED=1`).
+  - `apps/server/mcp_app.py` 88.46% → 100% (registered tool body
+    invoked via `mcp.call_tool`).
+  - `apps/server/middleware.py` 83% → 100% (route-exception branch).
+  - `domains/tracking/server/parser.py` 92% → 98.88% (7 defensive
+    guards for nested malformed fields).
+  - `domains/tracking/server/schenker_client.py` 83.51% → 97.94%
+    (XSRF prime failure, timeout, network error, 4xx-other,
+    non-JSON, empty resolver, context manager API).
+  - `domains/auth/server/store.py` 93.62% → 97.87% (unknown-id
+    consume → exhausted).
+  - `domains/auth/server/upstash_store.py` 82.61% → 96.52%
+    (corrupt-record paths, decode-record shapes, revoke-noop).
+- New e2e tests:
+  - `test_mcp_allowed_hosts.py` — `MCP_ALLOWED_HOSTS` widens the
+    DNS-rebinding allowlist in a real subprocess (positive +
+    negative-control).
+  - `test_request_id_middleware.py` exception-branch test.
 - Token-id correlation: `bearer_auth_middleware` now binds `token_id`
   and `plan` to structlog's contextvars on successful auth, so every
   log line in an authenticated request can be traced back to the
@@ -107,6 +133,13 @@ land on `main` without a bump.
 
 ### Fixed
 
+- `parse_resolver` crashed with `AttributeError` on non-object / non-list
+  payloads (None, scalar, string). Now raises `ParseError` consistent
+  with the parser's contract; pinned by a parametrised test across
+  None / int / str / float / bool.
+- `main()` had a dead "unknown command" branch that argparse made
+  unreachable (the parser already restricts `command` to the choices
+  list). Removed; saves a coverage false-positive.
 - Token-id was never reaching structlog contextvars. The previous
   `request_id_middleware` tried to read `request.state.auth` and bind
   `token_id` — but it ran outermost (added last in Starlette LIFO
