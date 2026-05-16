@@ -23,6 +23,8 @@ from typing import Any
 
 import pytest
 
+from tests.e2e.conftest import terminate_cleanly
+
 pytestmark = pytest.mark.e2e
 
 
@@ -61,11 +63,7 @@ async def mcp_subprocess() -> AsyncIterator[asyncio.subprocess.Process]:
     )
     yield proc
 
-    proc.terminate()
-    try:
-        await asyncio.wait_for(proc.wait(), timeout=3)
-    except TimeoutError:
-        proc.kill()
+    await terminate_cleanly(proc, timeout=3.0)
 
 
 @pytest.mark.asyncio
