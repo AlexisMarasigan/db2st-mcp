@@ -29,7 +29,9 @@ def _build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command")
 
     serve = sub.add_parser("serve", help="Start the HTTP server.")
-    serve.add_argument("--host", default="0.0.0.0")  # noqa: S104  # nosec B104
+    # S104 (ruff: hardcoded-bind-all-interfaces): inside a container the
+    # process must bind 0.0.0.0 so Knative's `$PORT` sidecar reaches it.
+    serve.add_argument("--host", default="0.0.0.0")  # noqa: S104
     serve.add_argument("--port", type=int, default=None)
     serve.add_argument("--reload", action="store_true")
 

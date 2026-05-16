@@ -38,7 +38,9 @@ class AppDeps:
 
 def build_deps(settings: Settings) -> AppDeps:
     """Construct dependencies. Synchronous: each dep is lazy-async-init internally."""
-    if settings.token_store == "upstash":  # nosec B105  — enum literal, not a password
+    # B105 (hardcoded-password-string): "upstash" is an enum literal
+    # for the token-store backend, not a credential.
+    if settings.token_store == "upstash":  # nosec B105
         from db2st_mcp.domains.auth.server.upstash_store import UpstashTokenStore
 
         token_store: TokenStore = UpstashTokenStore.from_settings(settings)
