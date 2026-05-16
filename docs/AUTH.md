@@ -22,11 +22,13 @@ Raw secret shown once at mint time. Lookups hash the incoming header.
 
 1. Client sends `Authorization: Bearer <secret>`.
 2. Middleware hashes, looks up record. 401 if missing/revoked.
-3. Middleware checks quota for current UTC day. 429 if exhausted.
+3. Middleware atomically `INCR`s the day's quota counter. If the
+   new count exceeds `daily_limit` → 429.
 4. Tool dispatcher runs handler.
-5. On success, middleware atomically increments quota.
 
-Quota incremented **post-success** so failed upstream calls don't burn budget.
+Quota is consumed **pre-handler**, so a failed upstream call still
+burns one quota unit. Trade-off documented in the Decision Log
+below; refund-on-failure is a future enhancement.
 
 ## Quota storage
 
@@ -64,3 +66,12 @@ Tokens are high-entropy random secrets, not human passwords. Hash exists only to
 
 **2026-05-15: Upstash over self-hosted Redis.**
 HTTP REST surface eliminates connection pool management in a scale-to-zero environment.
+
+**2026-05-16: Quota consumed pre-handler, not post-success.**
+Atomic Redis `INCR` is the only race-free quota check we can do in
+one round-trip. Decrement-on-success would need either a multi-step
+compare-and-set (slower, more failure modes) or a refund step
+that survives a crashed pod. Both are more complexity than today's
+upstream cost justifies. Documented here because earlier versions
+of this doc claimed the opposite — see middleware.py for the actual
+behaviour.
