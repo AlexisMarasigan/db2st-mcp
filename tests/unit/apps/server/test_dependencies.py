@@ -37,8 +37,11 @@ def test_upstash_branch_picks_upstash_store(monkeypatch: pytest.MonkeyPatch) -> 
     fake_module = types.ModuleType("upstash_redis")
     asyncio_module = types.ModuleType("upstash_redis.asyncio")
     asyncio_module.Redis = _FakeRedis  # type: ignore[attr-defined]
+    errors_module = types.ModuleType("upstash_redis.errors")
+    errors_module.UpstashError = type("UpstashError", (Exception,), {})  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "upstash_redis", fake_module)
     monkeypatch.setitem(sys.modules, "upstash_redis.asyncio", asyncio_module)
+    monkeypatch.setitem(sys.modules, "upstash_redis.errors", errors_module)
 
     settings = Settings(
         token_store="upstash",
@@ -79,8 +82,11 @@ def test_response_cache_upstash_branch(monkeypatch: pytest.MonkeyPatch) -> None:
     fake_module = types.ModuleType("upstash_redis")
     asyncio_module = types.ModuleType("upstash_redis.asyncio")
     asyncio_module.Redis = _FakeRedis  # type: ignore[attr-defined]
+    errors_module = types.ModuleType("upstash_redis.errors")
+    errors_module.UpstashError = type("UpstashError", (Exception,), {})  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "upstash_redis", fake_module)
     monkeypatch.setitem(sys.modules, "upstash_redis.asyncio", asyncio_module)
+    monkeypatch.setitem(sys.modules, "upstash_redis.errors", errors_module)
 
     settings = Settings(
         response_cache_backend="upstash",
