@@ -4,8 +4,11 @@ Verifies:
 - A missing `x-request-id` is generated (UUIDv4 shape).
 - A caller-supplied `x-request-id` is preserved and echoed back.
 - The response always carries the header.
-- An auth context on `request.state` is forwarded to the structlog
-  contextvars (the correlation channel logs use).
+- `path` is bound to the structlog contextvars.
+- When auth middleware is composed in the chain, its `token_id` lands
+  on the same contextvars (separate concern, owned by the auth
+  middleware itself — see `test_middleware_binds_token_id_to_contextvars`
+  in tests/unit/domains/auth/server/test_middleware.py).
 """
 
 from __future__ import annotations
@@ -58,24 +61,15 @@ def test_path_is_bound_to_contextvars(app: Starlette) -> None:
     assert "request_id" in ctx
 
 
-def test_token_id_is_forwarded_when_state_has_auth() -> None:
-    """Confirms the middleware binds the token id from a prior middleware
-    that wrote to `request.state.auth` (the auth middleware does this).
+def test_request_id_does_not_touch_token_id(app: Starlette) -> None:
+    """The token id is not the request-id middleware's concern.
+
+    request_id_middleware is added last → runs first → has no view of
+    `state.auth`. token_id binding lives in the auth middleware
+    instead; this test pins that the request-id middleware doesn't
+    accidentally bind a stale or empty token_id.
     """
-    from db2st_mcp.domains.auth.shared import AuthContext
-
-    async def stamp_then_echo(request):  # type: ignore[no-untyped-def]
-        # Simulate the auth middleware having stamped state.auth earlier.
-        request.state.auth = AuthContext(token_id="tok-abc", plan="pro", remaining_today=42)
-        ctx = structlog.contextvars.get_contextvars()
-        return JSONResponse({"context": dict(ctx)})
-
-    app = Starlette(routes=[Route("/echo", stamp_then_echo)])
-    app.add_middleware(BaseHTTPMiddleware, dispatch=request_id_middleware)
-    # NB: request.state.auth is read at middleware entry; in this synthetic
-    # test the route stamps it, so the test verifies the middleware doesn't
-    # crash on the typical (no-auth-yet) case. The auth->request_id ordering
-    # is exercised end-to-end in test_http_transport.py.
     with TestClient(app) as client:
         response = client.get("/echo")
-    assert response.status_code == 200
+    ctx = response.json()["context"]
+    assert "token_id" not in ctx

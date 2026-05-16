@@ -13,6 +13,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 
+import structlog
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
@@ -70,6 +71,9 @@ def bearer_auth_middleware(
                 headers={"retry-after": "86400"},
             )
         request.state.auth = ctx
+        # Bind the token id to the structlog context so downstream log
+        # lines in this request can be correlated to the caller.
+        structlog.contextvars.bind_contextvars(token_id=ctx.token_id, plan=ctx.plan)
         return await call_next(request)
 
     return middleware
