@@ -10,6 +10,22 @@ uv run pre-commit install    # local hooks
 cp .env.example .env         # adjust as needed
 ```
 
+### Optional extras (project.optional-dependencies)
+
+`uv sync --group dev` only installs runtime + dev deps; it deliberately
+does **not** pull `[project.optional-dependencies]`. If you want to
+exercise an opt-in code path locally, add the matching `--extra` flag
+and (for Playwright) install the browser driver:
+
+| Extra | When you need it | Install |
+|---|---|---|
+| `redis` | Anything that runs with `TOKEN_STORE=upstash` or `RESPONSE_CACHE_BACKEND=upstash`. The Dockerfile already bundles this; only needed on a dev machine. | `uv sync --group dev --extra redis` |
+| `fallback` | Local MCP runs with `DB2ST_HTML_FALLBACK=1` (the SPA-scrape backup path). | `uv sync --group dev --extra fallback && uv run playwright install chromium` |
+| `otel` | When `OTEL_EXPORTER_OTLP_ENDPOINT` is set and you want to see traces. | `uv sync --group dev --extra otel` |
+
+Without the matching extra, the import path that uses it raises a
+clear `Db2stError("<lib> not installed; reinstall with the [<extra>] extra")`.
+
 ## Workflow
 
 1. **Branch.** `feat/<scope>-<short-desc>` or `fix/<scope>-<short-desc>`.
