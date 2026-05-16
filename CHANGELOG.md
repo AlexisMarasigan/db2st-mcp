@@ -95,7 +95,11 @@ land on `main` without a bump.
   `claude mcp remove && claude mcp add`) before the second tool
   appears. Real papercut observed across this iteration's session;
   not a server bug (the server registers both tools and
-  `scripts/example_call.py` proves it).
+  `scripts/example_call.py` proves it). Extended in iter-172 to
+  cover the sibling staleness class: the long-running stdio
+  subprocess also holds whatever code was on disk at `claude mcp add`
+  time, so source fixes don't propagate until the next add — the
+  same `claude mcp remove && add` recovery applies.
 - `.env.example` extended with `DB2ST_HTML_FALLBACK` and
   `DB2ST_AUTH_DISABLED` under a new "Runtime feature flags"
   section. Both were referenced from the README, CONTRIBUTING, and
@@ -201,6 +205,18 @@ land on `main` without a bump.
 
 ### Security
 
+- **Scrubbed Pydantic internals from validation-error wire responses.**
+  Live MCP probe with `reference="ab"` (too short for the
+  `min_length=4` constraint) leaked three tokens to the wire: the
+  internal args-schema class name (`TrackShipmentArgs`), the
+  Pydantic version (`2.13` — mildly useful for CVE matching), and
+  the `errors.pydantic.dev` URL. Both `@mcp.tool` wrappers in
+  `mcp_app.py` now catch `ValidationError` and translate via a new
+  `_validation_error_to_domain` helper into `InvalidInputError` —
+  message is just the field `loc` + the human-readable `msg`
+  ("reference: String should have at least 4 characters"). Pinned
+  by a new test asserting none of the three leak tokens reach the
+  wire.
 - **Closed an auth-response side channel.** Three branches of
   `bearer_auth_middleware.authenticate()` (missing `Authorization`
   header, wrong token, revoked token) returned the same
