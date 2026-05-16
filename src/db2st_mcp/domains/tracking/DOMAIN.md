@@ -102,6 +102,8 @@ Structured log events emitted by the orchestrator and its primitives:
 | Event | Level | When |
 |---|---|---|
 | `tracking.cache_hit` | info | `TrackingService` served the response from cache (memory or Upstash). |
+| `tracking.cache_get_failed` | warning | The cache backend (typically `UpstashCache` when Upstash is unreachable) raised on read. The service degrades to a miss and falls through to the upstream path — the request still succeeds. Includes `reference` and `cause` (the exception class name). |
+| `tracking.cache_set_failed` | warning | Same idea for writes: an Upstash outage on `set()` after a successful upstream fetch would otherwise lose the result. Swallowed so the request returns the shipment. Includes `reference` and `cause`. |
 | `tracking.fallback_engaged` | warning | Primary upstream failed (breaker open or error); HTML fallback was invoked. Includes `reason`. |
 | `html_fallback.empty` | warning | The Playwright fallback scraped but returned no content. The tool maps this to `NotFoundError`; the log line surfaces it for ops. Includes `reference`. |
 | `html_fallback.playwright_error` | warning | Playwright itself errored (e.g., `Page.goto: Timeout 30000ms exceeded`, navigation crash). The tool maps it to `UpstreamUnavailableError` so the wire response stays in the project taxonomy and the breaker counts it as an upstream failure. Includes `reference` and `exc` (the Playwright exception class name). |
